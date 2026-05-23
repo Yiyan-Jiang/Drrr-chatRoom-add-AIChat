@@ -1,0 +1,66 @@
+.chat-bubble {
+  --bubble-border: #fff;
+  --bubble-border-width: 2.5px;
+  --bubble-tail-width: 16px;
+  --bubble-tail-height: 16px;
+  position: relative;
+  border-color: var(--bubble-border);
+  background-repeat: repeat;
+  background-size: cover;
+}
+
+.chat-bubble__tail {
+  position: absolute;
+  top: 20px;
+  width: var(--bubble-tail-width);
+  height: var(--bubble-tail-height);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.chat-bubble__tail-border,
+.chat-bubble__tail-fill {
+  position: absolute;
+  display: block;
+  background-repeat: repeat;
+  background-size: cover;
+}
+
+.chat-bubble__tail-border {
+  inset: 0;
+  background: var(--bubble-border);
+}
+
+.chat-bubble__tail-fill {
+  top: var(--bubble-border-width);
+  bottom: var(--bubble-border-width);
+  background-image: var(--bubble-image);
+}
+
+.chat-bubble--left .chat-bubble__tail {
+  left: calc(-1 * var(--bubble-tail-width));
+}
+
+.chat-bubble--left .chat-bubble__tail-border {
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+}
+
+.chat-bubble--left .chat-bubble__tail-fill {
+  left: var(--bubble-border-width);
+  right: 0;
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+}
+
+.chat-bubble--right .chat-bubble__tail {
+  right: calc(-1 * var(--bubble-tail-width));
+}
+
+.chat-bubble--right .chat-bubble__tail-border {
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.chat-bubble--right .chat-bubble__tail-fill {
+  left: 0;
+  right: var(--bubble-border-width);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}

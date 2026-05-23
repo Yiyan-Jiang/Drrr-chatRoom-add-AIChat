@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>&#x666e;&#x901a;&#x804a;&#x5929;&#x5ba4;&#x5e93;&#xff08;MySQL&#xff09;</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <span id="markdown-mermaid" aria-hidden="true" data-config="{&quot;darkModeTheme&quot;:&quot;dark&quot;,&quot;lightModeTheme&quot;:&quot;default&quot;,&quot;maxTextSize&quot;:50000,&quot;clickDrag&quot;:&quot;alt&quot;,&quot;showControls&quot;:&quot;onHoverOrFocus&quot;,&quot;resizable&quot;:true,&quot;maxHeight&quot;:&quot;&quot;}"></span>
+				<h2 id="普通聊天室库mysql">普通聊天室库（MySQL）</h2>
+<p>先登录 MySQL：</p>
+<blockquote>
+<p>mysql -u root -p</p>
+</blockquote>
+<p>然后</p>
+<pre><code class="language-SQL">SOURCE D:<span class="hljs-operator">/</span>python excise<span class="hljs-operator">/</span>Login <span class="hljs-keyword">and</span> chat rooms<span class="hljs-operator">/</span>core<span class="hljs-operator">/</span>init_database.sql;
+</code></pre>
+<p>或者</p>
+<pre><code class="language-SQL">SOURCE D:\\python excise\\Login <span class="hljs-keyword">and</span> chat rooms\\core\\init_database.sql;
+</code></pre>
+<p><strong>注意的是应该将以上绝对路径改成你自己的路径</strong></p>
+<h2 id="ai-聊天历史库postgresql">AI 聊天历史库（PostgreSQL）</h2>
+<p>先确认 <code>core/init_ai_database.sql</code> 里的 <code>ai_user</code> 密码和 <code>backend/.env</code> 里的
+<code>AI_DATABASE_URL</code> 一致。</p>
+<h3 id="方式一在-powershell--cmd-里执行">方式一：在 PowerShell / CMD 里执行</h3>
+<p>注意：下面这条命令是在系统终端里执行，不是在 <code>postgres=#</code> 这个 psql 交互窗口里执行。</p>
+<pre><code class="language-bash">psql -U postgres -f <span class="hljs-string">&quot;D:/python excise/Login and chat rooms/core/init_ai_database.sql&quot;</span>
+</code></pre>
+<p>或者：</p>
+<pre><code class="language-bash">psql -U postgres -f <span class="hljs-string">&quot;D:\\python excise\\Login and chat rooms\\core\\init_ai_database.sql&quot;</span>
+</code></pre>
+<h3 id="方式二已经进入-psql-交互窗口时执行">方式二：已经进入 psql 交互窗口时执行</h3>
+<p>如果你已经看到 <code>postgres=#</code>，不要再输入 <code>psql -U postgres -f ...</code>，而是执行：</p>
+<pre><code class="language-sql">\i <span class="hljs-string">&#x27;D:/python excise/Login and chat rooms/core/init_ai_database.sql&#x27;</span>
+</code></pre>
+<p>如果提示符变成了 <code>postgres-#</code>，说明上一条 SQL 还没结束。可以先按 <code>Ctrl+C</code> 取消，
+或者输入 <code>\r</code> 清空当前输入缓冲区，再执行上面的 <code>\i</code> 命令。</p>
+<p>这个脚本会创建 <code>ai_chat</code> 数据库、<code>ai_user</code> 用户、<code>ai_chat_history</code> 表、相关索引，
+并写入 <code>alembic_version=0001_create_ai_chat_history</code>，避免后端启动时再次提示 AI
+迁移未应用。</p>
+
+            
+            
+        </body>
+        </html>

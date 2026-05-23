@@ -1,0 +1,14 @@
+default_character: sakura
+characters:
+  sakura:
+    display_name: Sakura
+    prompt_file: sakura.md
+  rin:
+    display_name: Rin
+    prompt_file: rin.md
+  mio:
+    display_name: Mio
+    prompt_file: mio.md
+  yang:
+    display_name: Yang
+    prompt_file: yang.md

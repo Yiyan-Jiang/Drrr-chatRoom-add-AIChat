@@ -1,0 +1,21 @@
+default:
+  provider: deepseek
+  model: deepseek-chat
+routes:
+  chat:
+    default:
+      provider: deepseek
+      model: deepseek-chat
+    characters:
+      sakura:
+        provider: deepseek
+        model: deepseek-chat
+      rin:
+        provider: deepseek
+        model: deepseek-chat
+      mio:
+        provider: deepseek
+        model: deepseek-chat
+      yang:
+        provider: deepseek
+        model: deepseek-chat
