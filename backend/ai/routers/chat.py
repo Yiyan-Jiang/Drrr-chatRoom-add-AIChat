@@ -12,7 +12,7 @@ from common.dependencies import get_current_user_id
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
-
+# 聊天普通接口
 @router.post("/chat")
 async def chat(
     request: AIChatRequest,
@@ -36,7 +36,7 @@ async def chat(
 
     return StreamingResponse(
         generate(),
-        media_type="text/event-stream",
+        media_type="text/event-stream", # 流式饭返回包装
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
@@ -45,6 +45,7 @@ async def chat(
     )
 
 
+# 清空历史
 @router.delete("/chat/history")
 async def clear_history(
     character: Optional[str] = None,

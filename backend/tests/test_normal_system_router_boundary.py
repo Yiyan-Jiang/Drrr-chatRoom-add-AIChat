@@ -15,6 +15,7 @@ class NormalSystemRouterBoundaryTest(unittest.TestCase):
             from normal_system.routers import (
                 auth_router,
                 gate_router,
+                github_router,
                 message_router,
                 room_router,
                 socket_io_server,
@@ -23,6 +24,7 @@ class NormalSystemRouterBoundaryTest(unittest.TestCase):
 
         self.assertIsNotNone(auth_router)
         self.assertIsNotNone(gate_router)
+        self.assertIsNotNone(github_router)
         self.assertIsNotNone(message_router)
         self.assertIsNotNone(room_router)
         self.assertIsNotNone(socket_io_server)

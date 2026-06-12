@@ -110,6 +110,18 @@ async def get_ai_db():
 
 
 async def init_ai_db() -> None:
+    import ai.models.agent_artifact  # noqa: F401
+    import ai.models.agent_session  # noqa: F401
+    import ai.models.agent_turn  # noqa: F401
+    import ai.models.agent_turn_audit  # noqa: F401
     import ai.models.chat_history  # noqa: F401
+    import ai.models.harness_event  # noqa: F401
+    import ai.models.harness_run  # noqa: F401
+    import ai.models.governance_state  # noqa: F401
+    import ai.models.knowledge_chunk  # noqa: F401
+    import ai.models.knowledge_document  # noqa: F401
+    import ai.models.knowledge_job  # noqa: F401
+    import ai.models.knowledge_section  # noqa: F401
+    import ai.models.outbox_event  # noqa: F401
 
     await verify_ai_migrations_applied()

@@ -1,225 +1,336 @@
-// hooks/useAIChat.ts
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import type { AICharacter } from '../types/chat';
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useAuth } from '../contexts/AuthContext'
+import type { AICharacter } from '../types/chat'
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+const HISTORY_PAGE_SIZE = 30
 
 interface UseAIChatOptions {
-  character?: AICharacter;
-  onError?: (error: Error) => void;
+  character?: AICharacter
+  onError?: (error: Error) => void
+}
+
+export interface AIHistoryItem {
+  id: number
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  character?: AICharacter | null
+  sequence_no: number
+  created_at: string
 }
 
 interface UseAIChatReturn {
-  messages: string;
-  isLoading: boolean;
-  error: string | null;
-  sendMessage: (message: string) => Promise<void>;
-  clearHistory: () => Promise<void>;
-  abort: () => void;
+  messages: string
+  historyItems: AIHistoryItem[]
+  isLoading: boolean
+  isHistoryLoading: boolean
+  loadingOlderHistory: boolean
+  hasMoreHistory: boolean
+  error: string | null
+  sendMessage: (message: string) => Promise<void>
+  clearHistory: () => Promise<void>
+  loadOlderHistory: () => Promise<void>
+  abort: () => void
+}
+
+interface AgentHistoryResponse {
+  session_id: string | null
+  items: AIHistoryItem[]
+  has_more: boolean
+  next_before_sequence_no: number | null
+}
+
+function createRequestId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID()
+  }
+  return `frontend-${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function toViewportOrder(items: AIHistoryItem[]): AIHistoryItem[] {
+  return [...items].reverse()
 }
 
 export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
-  const { character = 'sakura', onError } = options;
-  
-  // 从 useAuth 获取最新状态
-  const { token, isAuthenticated } = useAuth();
+  const { character = 'sakura', onError } = options
+  const { token, isAuthenticated } = useAuth()
 
-  const [messages, setMessages] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [messages, setMessages] = useState('')
+  const [historyItems, setHistoryItems] = useState<AIHistoryItem[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false)
+  const [loadingOlderHistory, setLoadingOlderHistory] = useState(false)
+  const [hasMoreHistory, setHasMoreHistory] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
-  const messageBufferRef = useRef<string>('');
-  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null)
+  const agentSessionIdRef = useRef<string | null>(null)
+  const nextBeforeSequenceNoRef = useRef<number | null>(null)
+  const loadingOlderRef = useRef(false)
+  const messageBufferRef = useRef('')
 
-  const flushMessages = useCallback(() => {
-    if (flushTimerRef.current) return;
+  const buildHistoryUrl = useCallback((beforeSequenceNo?: number | null) => {
+    const params = new URLSearchParams({
+      character,
+      limit: String(HISTORY_PAGE_SIZE),
+    })
+    if (beforeSequenceNo != null) {
+      params.set('before_sequence_no', String(beforeSequenceNo))
+    }
+    return `${API_URL}/api/ai/turn/history?${params.toString()}`
+  }, [character])
 
-    flushTimerRef.current = setTimeout(() => {
-      setMessages(messageBufferRef.current);
-      flushTimerRef.current = null;
-    }, 8);
-  }, []);
+  const applyHistoryPage = useCallback((payload: AgentHistoryResponse, mode: 'replace' | 'append') => {
+    agentSessionIdRef.current = payload.session_id
+    nextBeforeSequenceNoRef.current = payload.next_before_sequence_no
+    setHasMoreHistory(payload.has_more)
+    const pageItems = toViewportOrder(payload.items)
+    setHistoryItems((prev) => mode === 'replace' ? pageItems : [...prev, ...pageItems])
+  }, [])
 
-  // 取消当前生成
   const abort = useCallback(() => {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
-
-    if (readerRef.current) {
-      readerRef.current.cancel().catch(() => {});
-      readerRef.current = null;
-    }
-
-    messageBufferRef.current = '';
-    if (flushTimerRef.current) {
-      clearTimeout(flushTimerRef.current);
-      flushTimerRef.current = null;
-    }
-
-    setMessages('');
-    setIsLoading(false);
-  }, []);
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = null
+    readerRef.current?.cancel().catch(() => {})
+    readerRef.current = null
+    messageBufferRef.current = ''
+    setMessages('')
+    setIsLoading(false)
+  }, [])
 
   useEffect(() => {
-    return abort;
-  }, [abort]);
+    return abort
+  }, [abort])
 
-  // 当性格切换时重置状态
+  const loadInitialHistory = useCallback(async () => {
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = null
+    readerRef.current?.cancel().catch(() => {})
+    readerRef.current = null
+    agentSessionIdRef.current = null
+    nextBeforeSequenceNoRef.current = null
+    messageBufferRef.current = ''
+    setMessages('')
+    setHistoryItems([])
+    setHasMoreHistory(false)
+    setError(null)
+    setIsLoading(false)
+
+    if (!token || !isAuthenticated) return
+
+    setIsHistoryLoading(true)
+    try {
+      const response = await fetch(buildHistoryUrl(), {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('登录已过期，请重新登录')
+        }
+        throw new Error(`历史记录加载失败 (${response.status})`)
+      }
+      const payload = (await response.json()) as AgentHistoryResponse
+      applyHistoryPage(payload, 'replace')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '历史记录加载失败'
+      agentSessionIdRef.current = null
+      nextBeforeSequenceNoRef.current = null
+      setHistoryItems([])
+      setHasMoreHistory(false)
+      setError(errorMessage)
+      onError?.(err as Error)
+    } finally {
+      setIsHistoryLoading(false)
+    }
+  }, [applyHistoryPage, buildHistoryUrl, isAuthenticated, onError, token])
+
   useEffect(() => {
-    // 中止当前生成
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
-    if (readerRef.current) {
-      readerRef.current.cancel().catch(() => {});
-      readerRef.current = null;
-    }
-    messageBufferRef.current = '';
-    if (flushTimerRef.current) {
-      clearTimeout(flushTimerRef.current);
-      flushTimerRef.current = null;
-    }
-    // 直接重置状态（异步避免警告）
-    setTimeout(() => {
-      setMessages('');
-      setError(null);
-      setIsLoading(false);
-    }, 0);
-  }, [character]);
+    void loadInitialHistory()
+  }, [loadInitialHistory])
 
-  // ==================== 发送消息 ====================
+  const loadOlderHistory = useCallback(async () => {
+    if (!token || !isAuthenticated || !hasMoreHistory || loadingOlderRef.current) return
+    const beforeSequenceNo = nextBeforeSequenceNoRef.current
+    if (beforeSequenceNo == null) return
+
+    loadingOlderRef.current = true
+    setLoadingOlderHistory(true)
+    try {
+      const response = await fetch(buildHistoryUrl(beforeSequenceNo), {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+      if (!response.ok) {
+        throw new Error(`历史记录加载失败 (${response.status})`)
+      }
+      const payload = (await response.json()) as AgentHistoryResponse
+      applyHistoryPage(payload, 'append')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '历史记录加载失败'
+      setError(errorMessage)
+      onError?.(err as Error)
+    } finally {
+      loadingOlderRef.current = false
+      setLoadingOlderHistory(false)
+    }
+  }, [applyHistoryPage, buildHistoryUrl, hasMoreHistory, isAuthenticated, onError, token])
+
   const sendMessage = useCallback(async (message: string) => {
-    // 认证检查
     if (!token || !isAuthenticated) {
-      setError('请先登录后再和我说悄悄话呀 (´•ω•̥`)');
-      return;
+      setError('请先登录后再和我聊天')
+      return
     }
 
-    // 取消上一次请求
-    abort();
-
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    setIsLoading(true);
-    setError(null);
-    setMessages('');
-    messageBufferRef.current = '';
+    abort()
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+    setIsLoading(true)
+    setError(null)
+    setMessages('')
+    messageBufferRef.current = ''
 
     try {
-      const response = await fetch(`${API_URL}/api/ai/chat`, {
+      const request_id = createRequestId()
+      const response = await fetch(`${API_URL}/api/ai/turn/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ message, character }),
+        body: JSON.stringify({
+          request_id,
+          session_id: agentSessionIdRef.current,
+          message,
+          character,
+          metadata: { source: 'frontend-ai-chat' },
+        }),
         signal: controller.signal,
-      });
+      })
 
       if (!response.ok) {
         if (response.status === 401) {
-          throw new Error('登录已过期，请重新登录哦～');
+          throw new Error('登录已过期，请重新登录')
         }
         if (response.status === 429) {
-          throw new Error('请求太频繁啦！小樱的服务器要冒烟了！');
+          throw new Error('请求太频繁了，请稍后再试')
         }
-        throw new Error(`服务器出小差了 (${response.status})，待会儿再试试吧～`);
+        const payload = await response.json().catch(() => null)
+        const detail = payload?.detail?.message ?? payload?.detail?.error_code
+        throw new Error(detail || `服务器错误 (${response.status})`)
       }
 
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('无法读取响应流');
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error('无法读取响应流')
+      }
 
-      readerRef.current = reader;
-      const decoder = new TextDecoder('utf-8');
-      let buffer = '';
+      readerRef.current = reader
+      const decoder = new TextDecoder('utf-8')
+      let buffer = ''
+      let currentEvent = 'message'
 
       while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
 
-        const chunk = decoder.decode(value, { stream: true });
-        buffer += chunk;
+        const events = buffer.split(/\n\n/)
+        buffer = events.pop() ?? ''
 
-        const lines = buffer.split(/\r?\n/);
-        buffer = lines.pop() || '';
+        for (const rawEvent of events) {
+          const lines = rawEvent.split(/\r?\n/)
+          const dataLines: string[] = []
+          currentEvent = 'message'
 
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith('data:')) continue;
+          for (const line of lines) {
+            if (line.startsWith('event:')) {
+              currentEvent = line.slice(6).trim()
+            } else if (line.startsWith('data:')) {
+              dataLines.push(line.slice(5).trimStart())
+            }
+          }
 
-          const data = trimmed.slice(5).trim();
+          const data = dataLines.join('\n')
+          if (!data) continue
+
+          if (currentEvent === 'session') {
+            agentSessionIdRef.current = data
+            continue
+          }
+
+          if (currentEvent === 'meta') {
+            continue
+          }
+
+          if (currentEvent === 'error') {
+            const payload = JSON.parse(data) as { error_code?: string; message?: string }
+            throw new Error(payload.message || payload.error_code || 'AI 流式响应失败')
+          }
 
           if (data === '[DONE]') {
-            flushMessages();
-            setIsLoading(false);
-            return;
+            setIsLoading(false)
+            return
           }
 
-          if (data.startsWith('错误:')) {
-            setError(data.slice(3).trim());
-            continue;
-          }
-
-          messageBufferRef.current += data;
-          flushMessages();
+          messageBufferRef.current += data
+          setMessages(messageBufferRef.current)
         }
       }
-
-      flushMessages();
     } catch (err) {
-      if ((err as Error).name === 'AbortError') return;
-
-      const errorMessage = err instanceof Error ? err.message : '未知错误发生啦';
-      setError(errorMessage);
-      onError?.(err as Error);
-    } finally {
-      abortControllerRef.current = null;
-      readerRef.current = null;
-      if (flushTimerRef.current) {
-        clearTimeout(flushTimerRef.current);
-        flushTimerRef.current = null;
+      if ((err as Error).name === 'AbortError') return
+      const errorMessage = err instanceof Error ? err.message : '未知错误'
+      if (errorMessage.includes('SESSION_OWNERSHIP_ERROR')) {
+        agentSessionIdRef.current = null
       }
-      setIsLoading(false);
+      setError(errorMessage)
+      onError?.(err as Error)
+    } finally {
+      abortControllerRef.current = null
+      readerRef.current = null
+      setIsLoading(false)
     }
-  }, [token, isAuthenticated, character, abort, onError, flushMessages]);
+  }, [token, isAuthenticated, character, abort, onError])
 
-  // ==================== 清空历史 ====================
   const clearHistory = useCallback(async () => {
     if (!token || !isAuthenticated) {
-      setError('请先登录才能清空历史记录');
-      return;
+      setError('请先登录才能清空历史记录')
+      return
     }
 
-    abort(); // 中止当前生成
-    setError(null);
-
-    try {
-      const response = await fetch(
-        `${API_URL}/api/ai/chat/history?character=${encodeURIComponent(character)}`,
-        {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`清空失败 (${response.status})`);
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : '清空历史失败';
-      setError(msg);
+    abort()
+    setError(null)
+    const response = await fetch(`${API_URL}/api/ai/turn/history?character=${encodeURIComponent(character)}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+    if (!response.ok) {
+      throw new Error(`清空历史失败 (${response.status})`)
     }
-  }, [token, isAuthenticated, character, abort]);
+
+    agentSessionIdRef.current = null
+    nextBeforeSequenceNoRef.current = null
+    setMessages('')
+    setHistoryItems([])
+    setHasMoreHistory(false)
+  }, [token, isAuthenticated, character, abort])
 
   return {
     messages,
+    historyItems,
     isLoading,
+    isHistoryLoading,
+    loadingOlderHistory,
+    hasMoreHistory,
     error,
     sendMessage,
     clearHistory,
+    loadOlderHistory,
     abort,
-  };
+  }
 }

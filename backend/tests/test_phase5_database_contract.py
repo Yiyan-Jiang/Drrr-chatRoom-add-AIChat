@@ -13,7 +13,7 @@ class Phase5DatabaseContractTest(unittest.TestCase):
             },
         ):
             import normal_system.models  # noqa: F401
-            import ai.models.chat_history  # noqa: F401
+            import ai.models  # noqa: F401
             from ai.database import AIBase
             from ai.models.chat_history import AIChatHistory
             from common.normal_database import Login
@@ -22,7 +22,36 @@ class Phase5DatabaseContractTest(unittest.TestCase):
             set(Login.metadata.tables),
             {"chatRoom_user", "chatRoom_room", "chatRoom_message"},
         )
-        self.assertEqual(set(AIBase.metadata.tables), {"ai_chat_history"})
+        self.assertEqual(
+            set(AIBase.metadata.tables),
+            {
+                "agent_artifacts",
+                "admin_audit_logs",
+                "admin_change_approvals",
+                "admin_change_requests",
+                "agent_policy_versions",
+                "agent_sessions",
+                "agent_skill_audit_logs",
+                "agent_skill_releases",
+                "agent_skill_versions",
+                "agent_skills",
+                "agent_turn_audit",
+                "agent_turns",
+                "ai_chat_history",
+                "harness_events",
+                "harness_runs",
+                "knowledge_chunks",
+                "knowledge_documents",
+                "knowledge_jobs",
+                "knowledge_sections",
+                "model_route_audit_logs",
+                "model_route_releases",
+                "model_route_rules",
+                "model_route_sets",
+                "outbox_events",
+                "provider_health_snapshots",
+            },
+        )
         self.assertEqual(set(AIChatHistory.__table__.foreign_keys), set())
 
     def test_migration_files_keep_database_boundaries(self):

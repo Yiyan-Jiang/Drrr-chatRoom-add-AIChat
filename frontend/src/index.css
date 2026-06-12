@@ -6,6 +6,10 @@ html, body, #root {
   padding: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 * {
   /* Firefox */
   scrollbar-width: none;
@@ -16,3 +20,37 @@ html, body, #root {
   width: 0px;
 }
 
+.article-toc-scrollbar {
+  scrollbar-width: thin;
+}
+
+.article-toc-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.article-toc-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #c6c6ca;
+}
+
+pre[data-theme] {
+  margin: 0;
+}
+
+pre[data-theme] code {
+  display: grid;
+}
+
+pre[data-theme] .line {
+  display: block;
+  min-height: 1.5rem;
+}
+
+pre[data-theme] .line[data-highlighted-line] {
+  background: rgba(52, 81, 178, 0.08);
+}
+
+pre[data-theme] .line[data-highlighted-line] .word[data-highlighted-chars] {
+  border-radius: 0.25rem;
+  background: rgba(52, 81, 178, 0.14);
+}

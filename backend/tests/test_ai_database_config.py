@@ -38,7 +38,7 @@ class AIDatabaseConfigTest(unittest.TestCase):
         self.assertIn("alembic -c ai/alembic.ini stamp head", missing)
         self.assertIn("ai_chat_history already exists", missing)
         self.assertNotIn("normal_system/alembic.ini", missing)
-        self.assertEqual(get_ai_alembic_head_revision(), "0001_create_ai_chat_history")
+        self.assertEqual(get_ai_alembic_head_revision(), "0005_harness_skill_state")
 
         mismatch = build_ai_migration_revision_mismatch_error("old_revision", "head_revision")
         self.assertIn("old_revision", mismatch)

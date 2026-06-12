@@ -36,6 +36,9 @@ class Phase5APIContractTest(unittest.TestCase):
             ("/api/auth/login", "POST"),
             ("/api/gate/verify", "POST"),
             ("/api/gate/status", "GET"),
+            ("/api/github/issues", "GET"),
+            ("/api/github/issues/{issue_number}", "GET"),
+            ("/api/github/issues/{issue_number}/comments", "GET"),
             ("/api/rooms/", "POST"),
             ("/api/rooms/", "GET"),
             ("/api/rooms/viewers/count", "GET"),
@@ -47,6 +50,7 @@ class Phase5APIContractTest(unittest.TestCase):
             ("/api/messages/room/{room_id}/page", "GET"),
             ("/api/ai/chat", "POST"),
             ("/api/ai/chat/history", "DELETE"),
+            ("/api/ai/turn", "POST"),
         }
 
         self.assertTrue(expected_routes.issubset(routes))

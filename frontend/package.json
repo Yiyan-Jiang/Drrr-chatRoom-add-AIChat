@@ -9,6 +9,8 @@
     "lint": "eslint .",
     "test:chat-room-lifecycle": "tsc --ignoreConfig --target ES2022 --module NodeNext --moduleResolution NodeNext --types node --outDir .tmp/tests tests/chat-room-lifecycle.test.ts && node --test .tmp/tests/chat-room-lifecycle.test.js",
     "test:ai-chat-ui": "tsc --ignoreConfig --target ES2022 --module NodeNext --moduleResolution NodeNext --types node --outDir .tmp/tests tests/ai-chat-ui.test.ts && node --test .tmp/tests/ai-chat-ui.test.js",
+    "test:github-issues-api": "tsc --ignoreConfig --target ES2022 --module NodeNext --moduleResolution NodeNext --types node,vite/client --outDir .tmp/tests tests/github-issues-api.test.ts && node --test .tmp/tests/tests/github-issues-api.test.js",
+    "test:news-documents": "tsc --ignoreConfig --target ES2022 --module NodeNext --moduleResolution NodeNext --types node,vite/client --outDir ../.tmp-news-documents-tests tests/news-documents.test.ts tests/news-feed-page.test.ts tests/news-article-detail.test.ts && node --test ../.tmp-news-documents-tests/tests/news-documents.test.js ../.tmp-news-documents-tests/tests/news-feed-page.test.js ../.tmp-news-documents-tests/tests/news-article-detail.test.js",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -16,8 +18,12 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-hot-toast": "^2.6.0",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.14.1",
+    "rehype-pretty-code": "^0.14.1",
+    "remark-gfm": "^4.0.1",
     "socket.io-client": "^4.8.3",
+    "shiki": "^2.5.0",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
