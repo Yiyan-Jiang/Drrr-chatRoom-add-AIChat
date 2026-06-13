@@ -4,7 +4,7 @@ from sqlalchemy import Column, DateTime, Integer, String, Text
 
 from ai.database import AIBase
 
-
+# AI 历史信息表
 class AIChatHistory(AIBase):
     __tablename__ = "ai_chat_history"
 

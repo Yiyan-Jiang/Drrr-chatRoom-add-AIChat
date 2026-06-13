@@ -10,6 +10,7 @@ from socketio import ASGIApp
 
 from ai.database import init_ai_db
 from ai.routers.chat import router as ai_router
+from ai.routers.turn import router as ai_turn_router
 from normal_system.bootstrap import init_db
 from normal_system.routers import (
     user_router,
@@ -18,6 +19,7 @@ from normal_system.routers import (
     message_router,
     socket_io_server as sio,
     gate_router,
+    github_router,
 )
 
 tags_metadata = [
@@ -92,7 +94,9 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(room_router, prefix="/api")
 app.include_router(message_router, prefix="/api")
 app.include_router(ai_router, prefix="/api")
+app.include_router(ai_turn_router, prefix="/api")
 app.include_router(gate_router, prefix="/api")
+app.include_router(github_router, prefix="/api")
 
 
 socketio_app = ASGIApp(sio, other_asgi_app=app)

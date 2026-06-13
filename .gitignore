@@ -83,6 +83,8 @@ htmlcov/
 # ============ Node / Frontend ============
 node_modules/
 /node_modules/
+.tmp/
+frontend/.tmp/
 dist/
 dist-ssr/
 *.local
@@ -91,6 +93,7 @@ dist-ssr/
 docs/
 backend/docs/
 frontend/docs/
+.tmp-news-documents-tests/
 
 # ============ Local reference assets ============
 UI参考/

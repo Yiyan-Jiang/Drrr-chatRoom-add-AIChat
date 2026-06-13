@@ -22,7 +22,7 @@ class OpenAICompatibleProvider:
         )
         return AsyncOpenAI(api_key=api_key, base_url=base_url or self.default_base_url)
 
-
+# 目前支持deepseek，openai，本地模型；梁圣的恩情还不完
 _PROVIDERS = {
     "deepseek": OpenAICompatibleProvider(
         name="deepseek",

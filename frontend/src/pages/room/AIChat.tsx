@@ -19,6 +19,8 @@ type AIChatLogItem = {
   id: number
   role: 'user' | 'assistant' | 'system'
   content: string
+  sequence_no?: number
+  created_at?: string
 }
 
 const ASSISTANT_USER_ID = 0
@@ -54,7 +56,7 @@ function toMessage(
             avatar_key: currentUser.avatar_key,
           }
         : null,
-    created_at: new Date(item.id).toISOString(),
+    created_at: item.created_at ?? new Date(item.id).toISOString(),
   }
 }
 
@@ -70,7 +72,18 @@ export default function AIChat() {
   const [input, setInput] = useState('')
   const [chatLog, setChatLog] = useState<AIChatLogItem[]>([])
 
-  const { messages, isLoading, error, sendMessage, clearHistory, abort } = useAIChat({ character })
+  const {
+    messages,
+    historyItems,
+    isLoading,
+    error,
+    sendMessage,
+    clearHistory,
+    abort,
+    loadOlderHistory,
+    hasMoreHistory,
+    loadingOlderHistory,
+  } = useAIChat({ character })
 
   const selectedCharacter = getCharacterMeta(character)
   const currentUser = useMemo(() => ({
@@ -78,9 +91,17 @@ export default function AIChat() {
     username: user?.username ?? '你',
     avatar_key: user?.avatar_key,
   }), [user])
+  const historyLog = useMemo(() => historyItems.map((item) => ({
+    id: item.id,
+    role: item.role,
+    content: item.content,
+    sequence_no: item.sequence_no,
+    created_at: item.created_at,
+  })), [historyItems])
+  const combinedLog = useMemo(() => [...chatLog, ...historyLog], [chatLog, historyLog])
   const renderedMessages = useMemo(
-    () => chatLog.map((item) => toMessage(item, character, currentUser)),
-    [character, chatLog, currentUser],
+    () => combinedLog.map((item) => toMessage(item, character, currentUser)),
+    [character, combinedLog, currentUser],
   )
 
   useEffect(() => {
@@ -154,6 +175,15 @@ export default function AIChat() {
     navigate('/home/rooms')
   }, [navigate])
 
+  const handleScroll = useCallback(() => {
+    const container = containerRef.current
+    if (!container || loadingOlderHistory || !hasMoreHistory) return
+    const distanceToTail = container.scrollHeight - container.scrollTop - container.clientHeight
+    if (distanceToTail < 80) {
+      void loadOlderHistory()
+    }
+  }, [containerRef, hasMoreHistory, loadOlderHistory, loadingOlderHistory])
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-black">
       <ChatRoomHeader
@@ -174,11 +204,11 @@ export default function AIChat() {
       <ChatMessageViewport
         messages={renderedMessages}
         currentUserId={currentUser.id}
-        hasMore={false}
-        loadingOlder={false}
+        hasMore={hasMoreHistory}
+        loadingOlder={loadingOlderHistory}
         unreadNewCount={0}
         containerRef={containerRef}
-        onScroll={() => {}}
+        onScroll={handleScroll}
         onJumpToHead={() => scrollToHead()}
       />
     </div>

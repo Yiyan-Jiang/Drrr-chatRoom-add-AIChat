@@ -44,6 +44,17 @@ class AISystemConfigTest(unittest.TestCase):
         self.assertIsInstance(provider, OpenAICompatibleProvider)
         self.assertEqual(provider.name, "deepseek")
 
+    def test_provider_registry_reports_unknown_provider_and_missing_key(self):
+        from unittest.mock import patch
+
+        with self.assertRaisesRegex(ValueError, "Unsupported AI provider: missing"):
+            get_provider("missing")
+
+        provider = get_provider("deepseek")
+        with patch.dict("os.environ", {}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, "DEEPSEEK_API_KEY"):
+                provider.create_client()
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -47,7 +47,7 @@ DEFAULT_CHARACTER = load_character_config().default_character
 def get_allowed_characters() -> list[str]:
     return list(load_character_config().prompt_files.keys())
 
-
+# 判断角色参数归一化，非法默认走的是 sakura
 def normalize_character(character: str | None) -> str:
     allowed = get_allowed_characters()
     return character if character in allowed else DEFAULT_CHARACTER
