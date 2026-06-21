@@ -21,6 +21,7 @@ from ai.harness.errors import (
 )
 from ai.harness.permissions import EffectivePolicy, PermissionDecision, check_permission
 from ai.harness.planner import DeterministicAnswerPlanner, Planner, plan_with_repair
+from ai.harness.planner_verifier import first_markdown_violation
 from ai.repositories.harness_repository import SqlAlchemyHarnessRepository
 from ai.runtime.default_tools import create_default_tool_registry
 from ai.runtime.registry import ToolRegistry
@@ -37,10 +38,12 @@ class HarnessRuntime:
         policy: EffectivePolicy | None = None,
         max_iterations: int = 8,
         planner_verifier=None,
+        response_renderer=None,
         max_repair_attempts: int = 1,
     ):
         self._repository = repository or SqlAlchemyHarnessRepository()
         self._planner = planner or DeterministicAnswerPlanner()
+        self._response_renderer = response_renderer
         self._registry = registry or create_default_tool_registry()
         self._policy = policy or EffectivePolicy(allowed_tools=self._registry.list_names())
         self._max_iterations = max_iterations
@@ -83,6 +86,9 @@ class HarnessRuntime:
                         "contract_rejected",
                         payload,
                     ),
+                    fallback_answer=(
+                        "我可以用普通文字继续说明，但不能用 Markdown 格式输出。"
+                    ),
                 )
                 await self._repository.append_event(
                     run.run_id,
@@ -114,14 +120,15 @@ class HarnessRuntime:
                 if isinstance(action, AnswerAction):
                     from ai.orchestrator.schemas import RunResult
 
+                    answer = await self._render_terminal_answer(workspace, action.answer)
                     await self._repository.append_event(
                         run.run_id,
                         "answer",
-                        {"answer": action.answer},
+                        {"answer": answer},
                     )
                     run = await self._repository.mark_terminal(run, "completed")
                     return RunResult(
-                        answer=action.answer,
+                        answer=answer,
                         trace_id=run.run_id,
                         metadata={"runtime": "harness", "status": "completed"},
                     )
@@ -129,10 +136,11 @@ class HarnessRuntime:
                 if isinstance(action, CompleteAction):
                     from ai.orchestrator.schemas import RunResult
 
+                    answer = await self._render_terminal_answer(workspace, action.answer)
                     await self._repository.append_event(
                         run.run_id,
                         "complete",
-                        {"answer": action.answer, "final_state": action.final_state},
+                        {"answer": answer, "final_state": action.final_state},
                     )
                     await self._repository.write_artifact(
                         run,
@@ -142,7 +150,7 @@ class HarnessRuntime:
                     )
                     run = await self._repository.mark_terminal(run, "completed")
                     return RunResult(
-                        answer=action.answer,
+                        answer=answer,
                         trace_id=run.run_id,
                         metadata={"runtime": "harness", "status": "completed"},
                     )
@@ -150,14 +158,15 @@ class HarnessRuntime:
                 if isinstance(action, AskUserAction):
                     from ai.orchestrator.schemas import RunResult
 
+                    question = await self._render_terminal_answer(workspace, action.question)
                     await self._repository.append_event(
                         run.run_id,
                         "ask_user",
-                        {"question": action.question},
+                        {"question": question},
                     )
                     run = await self._repository.mark_terminal(run, "waiting_user")
                     return RunResult(
-                        answer=action.question,
+                        answer=question,
                         trace_id=run.run_id,
                         metadata={"runtime": "harness", "status": "waiting_user"},
                     )
@@ -165,14 +174,15 @@ class HarnessRuntime:
                 if isinstance(action, DenyAction):
                     from ai.orchestrator.schemas import RunResult
 
+                    reason = await self._render_terminal_answer(workspace, action.reason)
                     await self._repository.append_event(
                         run.run_id,
                         "deny",
-                        {"reason": action.reason},
+                        {"reason": reason},
                     )
                     run = await self._repository.mark_terminal(run, "blocked")
                     return RunResult(
-                        answer=action.reason,
+                        answer=reason,
                         trace_id=run.run_id,
                         metadata={"runtime": "harness", "status": "blocked"},
                     )
@@ -282,6 +292,17 @@ class HarnessRuntime:
             )
 
         return None
+
+    async def _render_terminal_answer(self, workspace, draft_text: str) -> str:
+        if self._response_renderer is None:
+            return draft_text
+        rendered = await self._response_renderer.render(
+            character=getattr(workspace.command, "character", None),
+            draft_text=draft_text,
+        )
+        if first_markdown_violation(rendered) is not None:
+            return draft_text
+        return rendered
 
 
 def _action_payload(action) -> dict:

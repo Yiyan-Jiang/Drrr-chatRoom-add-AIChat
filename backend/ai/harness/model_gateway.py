@@ -18,16 +18,22 @@ class ModelGateway:
         self._config = config
         self._client = client or self._create_client(config)
 
-    async def complete(self, messages: list[dict[str, str]]) -> ModelGatewayResult:
+    async def complete(
+        self,
+        messages: list[dict[str, str]],
+        response_format: dict | None = {"type": "json_object"},
+    ) -> ModelGatewayResult:
         started = monotonic()
+        request_kwargs = {
+            "model": self._config.model,
+            "messages": messages,
+            "max_tokens": self._config.max_tokens,
+            "timeout": self._config.timeout_seconds,
+        }
+        if response_format is not None:
+            request_kwargs["response_format"] = response_format
         try:
-            response = await self._client.chat.completions.create(
-                model=self._config.model,
-                messages=messages,
-                max_tokens=self._config.max_tokens,
-                timeout=self._config.timeout_seconds,
-                response_format={"type": "json_object"},
-            )
+            response = await self._client.chat.completions.create(**request_kwargs)
         except Exception as exc:
             raise ModelGatewayError(str(exc)) from exc
 

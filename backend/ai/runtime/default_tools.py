@@ -1,6 +1,7 @@
 from ai.runtime.registry import ToolRegistry
 from ai.runtime.results import ToolResult
 from ai.runtime.tools import ToolExecutionContext, ToolPermission, ToolSpec
+from ai.environment.tools import register_environment_tools
 from ai.skills.tools import register_skill_tools
 from ai.skills.teaching.tools import register_teaching_tools
 
@@ -287,4 +288,5 @@ def create_default_tool_registry() -> ToolRegistry:
     )
     register_teaching_tools(registry)
     register_skill_tools(registry)
+    register_environment_tools(registry)
     return registry

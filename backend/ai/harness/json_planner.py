@@ -6,11 +6,11 @@ from ai.harness.planner_schema import get_llm_planner_action_schema
 
 def build_planner_contract_prompt() -> str:
     return (
-        "You are the planner for this agent runtime. Return exactly one JSON object "
-        "and no markdown or prose. The JSON object must include a top-level string "
-        '"type" field. Valid action schemas are:\n'
+        "你是这个 agent 运行时的规划器（planner）。只返回一个 JSON 对象，"
+        "不要输出任何 markdown 或解释性文字。该 JSON 对象必须包含顶层字符串字段 "
+        '"type"。可用的 action schema 如下：\n'
         f"{json.dumps(get_llm_planner_action_schema(), ensure_ascii=False, sort_keys=True)}\n"
-        'For a direct chat reply, use exactly: {"type":"answer","answer":"your reply"}.'
+        '若要直接进行对话回复，请严格使用：{"type":"answer","answer":"你的回复"}。'
     )
 
 

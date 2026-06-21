@@ -133,7 +133,7 @@ class Phase3ContextCompilerTest(unittest.TestCase):
         self.assertIn("answer", content)
         self.assertIn("tool_calls", content)
 
-    def test_compile_context_injects_character_system_prompt(self):
+    def test_compile_context_excludes_character_system_prompt(self):
         from ai.harness.context import compile_context
 
         context = compile_context(
@@ -144,11 +144,13 @@ class Phase3ContextCompilerTest(unittest.TestCase):
         )
 
         sections = [item.section for item in context.ledger]
-        self.assertIn("character_prompt", sections)
+        self.assertNotIn("character_prompt", sections)
 
         content = "\n".join(message["content"] for message in context.messages)
-        self.assertIn("小樱", content)
-        self.assertIn("傲娇", content)
+        self.assertNotIn("character_prompt", content)
+
+        self.assertIn("allowed_actions", content)
+        self.assertIn("planner output must be one JSON object", content)
 
     def test_compile_context_includes_recent_turn_content(self):
         from ai.harness.context import compile_context
@@ -168,6 +170,36 @@ class Phase3ContextCompilerTest(unittest.TestCase):
         self.assertIn("We can start with event loops.", content)
         self.assertIn('"role": "user"', content)
         self.assertIn('"sequence_no": 1', content)
+
+    def test_estimate_tokens_counts_cjk_higher_than_ascii(self):
+        from ai.harness.context import _estimate_tokens
+
+        cjk = "一二三四五六七八九十一二三四五六七八九十"
+        self.assertGreater(_estimate_tokens(cjk), len(cjk) // 4)
+        self.assertEqual(_estimate_tokens(""), 1)
+
+    def test_compile_context_drops_low_priority_sections_over_budget(self):
+        from ai.harness.context import compile_context
+
+        context = compile_context(
+            workspace=self._workspace_with_recent_turns(),
+            run=SimpleNamespace(run_id="run-1", checkpoint_payload={}),
+            events=[],
+            artifacts=[],
+            token_budget=20,
+        )
+
+        by_section = {item.section: item for item in context.ledger}
+        # 必留段即使超预算也保留。
+        self.assertTrue(by_section["current_input"].included)
+        self.assertTrue(by_section["run_policy"].included)
+        # 历史类低优先级段被预算丢弃。
+        self.assertFalse(by_section["recent_turns"].included)
+        self.assertEqual(by_section["recent_turns"].reason, "budget")
+
+        content = "\n".join(message["content"] for message in context.messages)
+        self.assertIn("what did I ask before?", content)
+        self.assertNotIn("I want to learn asyncio", content)
 
 
 if __name__ == "__main__":
