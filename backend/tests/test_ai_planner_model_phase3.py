@@ -93,6 +93,43 @@ class Phase3ModelGatewayTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(completions.kwargs["model"], "planner-model")
         self.assertEqual(completions.kwargs["response_format"], {"type": "json_object"})
 
+    async def test_gateway_lets_callers_disable_json_response_format(self):
+        from ai.harness.model_config import PlannerModelConfig
+        from ai.harness.model_gateway import ModelGateway
+
+        class FakeCompletions:
+            async def create(self, **kwargs):
+                self.kwargs = kwargs
+                return SimpleNamespace(
+                    choices=[
+                        SimpleNamespace(
+                            message=SimpleNamespace(content="plain text"),
+                            finish_reason="stop",
+                        )
+                    ]
+                )
+
+        completions = FakeCompletions()
+        fake_client = SimpleNamespace(chat=SimpleNamespace(completions=completions))
+        gateway = ModelGateway(
+            PlannerModelConfig(
+                api_key="key",
+                base_url="http://model.test/v1",
+                model="planner-model",
+                max_tokens=256,
+                timeout_seconds=10.0,
+            ),
+            client=fake_client,
+        )
+
+        result = await gateway.complete(
+            [{"role": "user", "content": "hi"}],
+            response_format=None,
+        )
+
+        self.assertEqual(result.raw_text, "plain text")
+        self.assertNotIn("response_format", completions.kwargs)
+
     async def test_gateway_fails_on_empty_model_content(self):
         from ai.harness.errors import ModelGatewayError
         from ai.harness.model_config import PlannerModelConfig

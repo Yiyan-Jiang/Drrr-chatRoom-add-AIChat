@@ -335,6 +335,24 @@ class QueuePlanner:
         return self.outputs.pop(0)
 
 
+class FakeResponseRenderer:
+    def __init__(self):
+        self.calls = []
+
+    async def render(self, *, character, draft_text):
+        self.calls.append({"character": character, "draft_text": draft_text})
+        return f"rendered::{draft_text}"
+
+
+class FakeRenderGateway:
+    def __init__(self):
+        self.calls = []
+
+    async def complete(self, messages, response_format=None):
+        self.calls.append({"messages": messages, "response_format": response_format})
+        return type("Result", (), {"raw_text": "styled reply"})()
+
+
 class HarnessRuntimeTest(unittest.IsolatedAsyncioTestCase):
     async def test_runtime_answer_action_records_events_and_returns_result(self):
         from ai.harness.runtime import HarnessRuntime
@@ -464,6 +482,39 @@ class HarnessRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.metadata["status"], "completed")
         self.assertEqual(repository.artifacts[0].artifact_type, "run_final_state")
         self.assertEqual(repository.artifacts[0].payload, {"score": 1})
+
+    async def test_runtime_renders_terminal_answers_with_character_prompt(self):
+        from ai.harness.runtime import HarnessRuntime
+
+        repository = FakeHarnessRepository()
+        renderer = FakeResponseRenderer()
+        runtime = HarnessRuntime(
+            repository=repository,
+            planner=QueuePlanner(['{"type": "answer", "answer": "plain draft"}']),
+            response_renderer=renderer,
+        )
+        workspace = FakeWorkspace(
+            command=FakeCommand(character="sakura"),
+            session=type("Session", (), {"session_id": "session-1", "user_id": 7})(),
+            recent_turns=[],
+        )
+
+        result = await runtime.run_turn(workspace)
+
+        self.assertEqual(result.answer, "rendered::plain draft")
+        self.assertEqual(renderer.calls[0]["character"], "sakura")
+        self.assertEqual(renderer.calls[0]["draft_text"], "plain draft")
+
+    async def test_final_response_renderer_disables_json_response_format(self):
+        from ai.harness.response_renderer import FinalResponseRenderer
+
+        gateway = FakeRenderGateway()
+        renderer = FinalResponseRenderer(gateway=gateway)
+
+        result = await renderer.render(character="sakura", draft_text="hello")
+
+        self.assertEqual(result, "styled reply")
+        self.assertEqual(gateway.calls[0]["response_format"], None)
 
 
 class RuntimeToolRegistryTest(unittest.IsolatedAsyncioTestCase):

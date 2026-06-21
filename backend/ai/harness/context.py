@@ -3,7 +3,7 @@ import json
 from typing import Any
 
 from ai.harness.planner_schema import LLM_PLANNER_ALLOWED_ACTIONS
-from ai.prompts.character_service import get_system_prompt, normalize_character
+from ai.prompts.character_service import normalize_character
 
 
 @dataclass(frozen=True)
@@ -21,29 +21,110 @@ class CompiledContext:
     token_estimate: int
 
 
+DEFAULT_CONTEXT_TOKEN_BUDGET = 24000
+
+# 段名 -> 优先级。数值越小越优先保留。必留段（优先级 0）即使超预算也不丢弃，
+# 否则 planner 无法工作；历史类段优先级最高，超预算时最先被丢弃。
+_SECTION_PRIORITY = {
+    "current_input": 0,
+    "run_policy": 0,
+    "tool_schemas": 0,
+    "workspace": 1,
+    "checkpoint": 1,
+    "skill_instructions": 1,
+    "skill_state": 1,
+    "skill_artifact_contracts": 1,
+    "skill_checkpoint_schema": 1,
+    "artifact_summaries": 2,
+    "observations": 3,
+    "recent_events": 4,
+    "recent_turns": 5,
+}
+_DEFAULT_PRIORITY = 3
+
+
 def _estimate_tokens(value: str) -> int:
-    return max(1, len(value) // 4)
+    cjk = 0
+    other = 0
+    for ch in value:
+        if "一" <= ch <= "鿿" or "　" <= ch <= "〿" or "＀" <= ch <= "￯":
+            cjk += 1
+        else:
+            other += 1
+    # CJK 字符约 0.6 token/字，其余约 4 char/token。
+    return max(1, round(cjk * 0.6 + other / 4))
+
+
+@dataclass(frozen=True)
+class _SectionCandidate:
+    section: str
+    content: str
+    role: str
+    token_estimate: int
 
 
 def _add_section(
-    messages: list[dict[str, str]],
-    ledger: list[ContextLedgerItem],
+    candidates: list[_SectionCandidate],
     section: str,
     content: str,
     role: str = "system",
 ) -> None:
-    included = bool(content)
-    token_estimate = _estimate_tokens(content) if included else 0
-    if included:
-        messages.append({"role": role, "content": content})
-    ledger.append(
-        ContextLedgerItem(
+    candidates.append(
+        _SectionCandidate(
             section=section,
-            included=included,
-            reason="included" if included else "empty",
-            token_estimate=token_estimate,
+            content=content,
+            role=role,
+            token_estimate=_estimate_tokens(content) if content else 0,
         )
     )
+
+
+def _select_within_budget(
+    candidates: list[_SectionCandidate],
+    token_budget: int,
+) -> tuple[list[dict[str, str]], list[ContextLedgerItem]]:
+    # 必留段（优先级 0）先占用预算，再按优先级从低到高纳入其余非空段。
+    spent = sum(
+        c.token_estimate
+        for c in candidates
+        if c.content and _SECTION_PRIORITY.get(c.section, _DEFAULT_PRIORITY) == 0
+    )
+    droppable = sorted(
+        (c for c in candidates if c.content and _SECTION_PRIORITY.get(c.section, _DEFAULT_PRIORITY) != 0),
+        key=lambda c: _SECTION_PRIORITY.get(c.section, _DEFAULT_PRIORITY),
+    )
+    kept_sections: set[str] = set()
+    for candidate in droppable:
+        if spent + candidate.token_estimate <= token_budget:
+            spent += candidate.token_estimate
+            kept_sections.add(candidate.section)
+
+    messages: list[dict[str, str]] = []
+    ledger: list[ContextLedgerItem] = []
+    for candidate in candidates:
+        if not candidate.content:
+            ledger.append(
+                ContextLedgerItem(
+                    section=candidate.section,
+                    included=False,
+                    reason="empty",
+                    token_estimate=0,
+                )
+            )
+            continue
+        priority = _SECTION_PRIORITY.get(candidate.section, _DEFAULT_PRIORITY)
+        included = priority == 0 or candidate.section in kept_sections
+        if included:
+            messages.append({"role": candidate.role, "content": candidate.content})
+        ledger.append(
+            ContextLedgerItem(
+                section=candidate.section,
+                included=included,
+                reason="included" if included else "budget",
+                token_estimate=candidate.token_estimate,
+            )
+        )
+    return messages, ledger
 
 
 def compile_context(
@@ -53,9 +134,9 @@ def compile_context(
     artifacts: list,
     registry=None,
     policy=None,
+    token_budget: int = DEFAULT_CONTEXT_TOKEN_BUDGET,
 ) -> CompiledContext:
-    messages: list[dict[str, str]] = []
-    ledger: list[ContextLedgerItem] = []
+    candidates: list[_SectionCandidate] = []
 
     checkpoint = getattr(run, "checkpoint_payload", None)
     skill_state = getattr(run, "skill_state_payload", None) or {}
@@ -76,21 +157,21 @@ def compile_context(
     current_message = getattr(workspace.command, "message", "")
     character = normalize_character(getattr(workspace.command, "character", None))
 
-    _add_section(messages, ledger, "workspace", f"session={workspace.session.session_id}")
-    _add_section(messages, ledger, "character_prompt", get_system_prompt(character))
-    _add_section(messages, ledger, "run_policy", _run_policy_content(policy))
-    _add_section(messages, ledger, "tool_schemas", _tool_schema_content(registry, policy))
-    _add_section(messages, ledger, "checkpoint", str(checkpoint or {}))
-    _add_section(messages, ledger, "skill_instructions", skill_instructions)
-    _add_section(messages, ledger, "skill_state", str(skill_state or {}))
-    _add_section(messages, ledger, "skill_artifact_contracts", str(artifact_contracts or {}))
-    _add_section(messages, ledger, "skill_checkpoint_schema", str(checkpoint_schemas or {}))
-    _add_section(messages, ledger, "recent_events", _recent_events_content(events))
-    _add_section(messages, ledger, "observations", _observations_content(events))
-    _add_section(messages, ledger, "artifact_summaries", _artifact_summaries_content(artifacts))
-    _add_section(messages, ledger, "recent_turns", _recent_turns_content(workspace.recent_turns))
-    _add_section(messages, ledger, "current_input", current_message, role="user")
+    _add_section(candidates, "workspace", f"session={workspace.session.session_id}")
+    _add_section(candidates, "run_policy", _run_policy_content(policy))
+    _add_section(candidates, "tool_schemas", _tool_schema_content(registry, policy))
+    _add_section(candidates, "checkpoint", str(checkpoint or {}))
+    _add_section(candidates, "skill_instructions", skill_instructions)
+    _add_section(candidates, "skill_state", str(skill_state or {}))
+    _add_section(candidates, "skill_artifact_contracts", str(artifact_contracts or {}))
+    _add_section(candidates, "skill_checkpoint_schema", str(checkpoint_schemas or {}))
+    _add_section(candidates, "recent_events", _recent_events_content(events))
+    _add_section(candidates, "observations", _observations_content(events))
+    _add_section(candidates, "artifact_summaries", _artifact_summaries_content(artifacts))
+    _add_section(candidates, "recent_turns", _recent_turns_content(workspace.recent_turns))
+    _add_section(candidates, "current_input", current_message, role="user")
 
+    messages, ledger = _select_within_budget(candidates, token_budget)
     return CompiledContext(
         messages=messages,
         ledger=ledger,

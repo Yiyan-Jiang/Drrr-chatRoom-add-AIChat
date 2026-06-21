@@ -71,6 +71,38 @@ class Phase3RuntimeVerifierIntegrationTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(rejected_events[0].payload["attempt"], 0)
         self.assertIn("action type not allowed", rejected_events[0].payload["error_message"])
 
+    async def test_runtime_returns_plain_text_fallback_when_markdown_repair_fails(self):
+        from ai.harness.permissions import EffectivePolicy
+        from ai.harness.planner_verifier import PlannerVerifier
+        from ai.harness.runtime import HarnessRuntime
+        from ai.runtime.default_tools import create_default_tool_registry
+        from tests.test_ai_harness_phase4 import FakeHarnessRepository, QueuePlanner
+
+        repository = FakeHarnessRepository()
+        runtime = HarnessRuntime(
+            repository=repository,
+            planner=QueuePlanner(
+                [
+                    '{"type": "answer", "answer": "**Markdown** 可以这样写"}',
+                    '{"type": "answer", "answer": "**Markdown** 还是这样写"}',
+                ]
+            ),
+            registry=create_default_tool_registry(),
+            policy=EffectivePolicy(allowed_tools=["read_checkpoint"]),
+            planner_verifier=PlannerVerifier(),
+            max_repair_attempts=1,
+        )
+
+        result = await runtime.run_turn(self._workspace())
+
+        self.assertEqual(result.metadata["status"], "completed")
+        self.assertNotIn("**", result.answer)
+        self.assertIn("普通文字", result.answer)
+        rejected_events = [
+            event for event in repository.events if event.event_type == "contract_rejected"
+        ]
+        self.assertEqual(len(rejected_events), 2)
+
     async def test_runtime_validates_tool_arguments_before_normalize(self):
         from ai.harness.errors import PlannerInvalidAction
         from ai.harness.permissions import EffectivePolicy
