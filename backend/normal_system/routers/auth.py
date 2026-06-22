@@ -31,6 +31,7 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="用户名或密码错误",
         )
+    # 用用户 ID 生成 JWT，返回令牌字符串和过期时间（秒）
     token, expires_in = create_access_token(user.id)
     return LoginResponse(
         access_token=token,

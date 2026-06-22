@@ -1,4 +1,5 @@
 import axios from "axios";
+import { logger } from '@/utils/logger';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -19,11 +20,10 @@ apiClient.interceptors.request.use((config) => {
   }
   // 调试gate相关请求
   if (config.url?.includes('/gate')) {
-    console.log('[DEBUG] Gate request config:', {
+    logger.debug('[gate] request config', {
       url: config.url,
       method: config.method,
       withCredentials: config.withCredentials,
-      headers: config.headers,
     });
   }
   return config;
@@ -34,10 +34,9 @@ apiClient.interceptors.response.use(
   response => {
     // 调试gate相关响应
     if (response.config?.url?.includes('/gate')) {
-      console.log('[DEBUG] Gate response:', {
+      logger.debug('[gate] response', {
+        url: response.config.url,
         status: response.status,
-        headers: response.headers,
-        data: response.data,
       });
     }
     return response;
@@ -60,16 +59,16 @@ apiClient.interceptors.response.use(
           window.location.href = '/login';
         }
       } else if (status === 404) {
-        console.error('资源未找到:', error.config?.url);
+        logger.error('资源未找到:', { url: error.config?.url });
       } else if (status >= 500) {
-        console.error('服务器错误:', status);
+        logger.error('服务器错误:', { status });
       }
     } else if (error.request) {
       // 请求已发送但没有收到响应
-      console.error('网络错误: 无法连接到服务器');
+      logger.error('网络错误: 无法连接到服务器');
     } else {
       // 请求配置出错
-      console.error('请求错误:', error.message);
+      logger.error('请求错误:', { message: error.message });
     }
     
     return Promise.reject(error);

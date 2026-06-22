@@ -69,3 +69,4 @@ psql -U postgres -f "~/Login and chat rooms/core/init_ai_database.sql"
 - 实时聊天主要通过 Socket.IO 实现
 - AI 聊天使用流式输出
 - 本地配置以 `.env` 为准，按仓库里的示例文件填写即可
+- 个人的 review 链接 ： https://fcn5hb1vp409.feishu.cn/wiki/PML1wKbW3iNUr1k1WeVc1mVhnP5?from=from_copylink

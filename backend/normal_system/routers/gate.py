@@ -4,7 +4,7 @@ from fastapi import APIRouter, Form, HTTPException, Request, Response, status
 
 router = APIRouter(prefix="/gate", tags=["gate"])
 
-
+# 获取本地环境变量密码
 def get_gate_password() -> str:
     password = os.environ.get("CHAT_GATE_PASSWORD")
     if not password:
@@ -14,7 +14,7 @@ def get_gate_password() -> str:
         )
     return password
 
-
+# 校验密码
 @router.post("/verify")
 async def verify_gate(response: Response, password: str = Form(...)):
     if password == get_gate_password():
@@ -30,7 +30,7 @@ async def verify_gate(response: Response, password: str = Form(...)):
         return {"success": True}
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="密码错误")
 
-
+# 查询gate状态
 @router.get("/status")
 async def gate_status(request: Request):
     gate_passed = request.cookies.get("gate_passed")

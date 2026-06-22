@@ -2,7 +2,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { User, LoginResponse } from '../types/chat';
-import { socketManager } from '../socket/socketManager';
+import { socketManager } from '@/services/socket';
 
 interface AuthContextType {
   user: User | null;

@@ -3,8 +3,9 @@ import { isAxiosError } from 'axios'
 import toast from 'react-hot-toast'
 import { roomApi } from '@/api/rooms'
 import { messagesApi } from '@/api/messages'
-import { socketManager } from '@/socket/socketManager'
+import { socketManager } from '@/services/socket'
 import type { Message, PaginatedMessagesResponse, RoomMember, RoomWithMessages, UpdateRoomRequest, User } from '@/types/chat'
+import { logger } from '@/utils/logger'
 import { createOptimisticMessage, mergeMessages } from './chatMessageMerge'
 
 type ChatError = { kind: 'not_found' | 'forbidden' | 'network' | 'unknown'; message: string }
@@ -184,7 +185,9 @@ export function useRoomChat(roomId: number, user: User | null, isNearHead: () =>
       })
       dispatch({ type: 'MESSAGES_OLDER_SUCCESS', page })
     } catch (error) {
-      console.error('[chat] history fetch failed', error)
+      logger.error('[chat] history fetch failed', {
+        message: error instanceof Error ? error.message : String(error),
+      })
       dispatch({ type: 'MESSAGES_OLDER_SUCCESS', page: { items: [], has_more: false, next_before_id: null } })
     }
   }, [roomId])
@@ -241,7 +244,11 @@ export function useRoomChat(roomId: number, user: User | null, isNearHead: () =>
     const handleReconnect = () => {
       dispatch({ type: 'RECONNECTING_CHANGED', reconnecting: false })
       socketManager.joinRoom(roomId)
-      reloadLatestMessages().catch((error) => console.error('[chat] reconnect history fetch failed', error))
+      reloadLatestMessages().catch((error) =>
+        logger.error('[chat] reconnect history fetch failed', {
+          message: error instanceof Error ? error.message : String(error),
+        }),
+      )
     }
     const handleDisconnect = () => dispatch({ type: 'RECONNECTING_CHANGED', reconnecting: true })
 

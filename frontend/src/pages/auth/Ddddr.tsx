@@ -23,13 +23,9 @@ export default function Ddddr() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-black">
-
        <div className='mb-10'>
         <AuthBrand logoSizeClassName="h-110 w-110" showBanner={false} />
       </div>
-
-
-
       <GatePasswordForm password={password} onPasswordChange={setPassword} onSubmit={handleSubmit} />
     </div>
   );
