@@ -6,7 +6,16 @@ import hashlib
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import delete, func
 from normal_system.models import User, Message, Room
-from normal_system.schemas import MessageInDB, UserCreate, UserUpdate, MessageCreate, RoomCreate, RoomUpdate, UserPublic
+from normal_system.schemas import (
+    MessageInDB,
+    MessageCreate,
+    RoomCreate,
+    RoomUpdate,
+    UserCreate,
+    UserProfileUpdate,
+    UserPublic,
+    UserUpdate,
+)
 from tool.isUnion_name import is_duplicate_entry_error
 
 
@@ -40,6 +49,8 @@ async def create_user(db: AsyncSession, user: UserCreate) -> User:
     db_user = User(
         username=user.username,
         password=hashed_password,
+        nickname=user.username,
+        bio="",
         avatar_key=_default_avatar_key(user.username),
     )
     db.add(db_user)
@@ -61,20 +72,33 @@ async def update_user(
     db_user = await get_user_by_id(db, user_id)
     if not db_user:
         return None
-    if user_update.username is not None:
-        db_user.username = user_update.username
-    if user_update.password is not None:
-        db_user.password = hashlib.sha256(user_update.password.encode()).hexdigest()
+    db_user.nickname = user_update.nickname
+    db_user.bio = user_update.bio
+    if user_update.avatar_key is not None:
+        db_user.avatar_key = user_update.avatar_key
     try:
         await db.commit()
         await db.refresh(db_user)
         return db_user
     except IntegrityError as e:
         await db.rollback()
-        if is_duplicate_entry_error(e, "username"):
-            raise ValueError(f"User {user_update.username} already exists")
-        else:
-            raise
+        raise
+
+
+async def update_user_profile(
+    db: AsyncSession,
+    user_id: int,
+    profile: UserProfileUpdate,
+) -> Optional[User]:
+    return await update_user(
+        db,
+        user_id,
+        UserUpdate(
+            nickname=profile.nickname,
+            bio=profile.bio,
+            avatar_key=profile.avatar_key,
+        ),
+    )
 
 
 async def delete_user(db: AsyncSession, user_id: int) -> bool:
@@ -114,6 +138,22 @@ async def get_message_by_room(db: AsyncSession, room_id: int) -> List[Message]:
     )
     messages: List[Message] = res.scalars().all()
     return messages
+
+
+async def get_messages_with_authors_by_room(
+    db: AsyncSession,
+    room_id: int,
+    limit: int = 50,
+) -> List[MessageInDB]:
+    res = await db.execute(
+        select(Message, User)
+        .outerjoin(User, Message.user_id == User.id)
+        .where(Message.room_id == room_id)
+        .order_by(Message.created_at.desc())
+        .limit(limit)
+    )
+    rows = res.all()
+    return [serialize_message(message, author) for message, author in rows]
 
 
 async def get_messages_page_by_room(
@@ -247,6 +287,15 @@ async def get_all_rooms(db: AsyncSession, skip: int = 0, limit: int = 50) -> Lis
     return res.scalars().all()
 
 
+async def get_rooms_by_owner(db: AsyncSession, owner_id: int) -> List[Room]:
+    res = await db.execute(
+        select(Room)
+        .where(Room.owner_id == owner_id)
+        .order_by(Room.created_at.desc())
+    )
+    return res.scalars().all()
+
+
 async def update_room(
     db: AsyncSession,
     room_id: int,
@@ -318,9 +367,11 @@ __all__ = [
     "get_all_rooms",
     "get_message_by_id",
     "get_message_by_room",
+    "get_messages_with_authors_by_room",
     "get_messages_page_by_room",
     "get_room_by_id",
     "get_room_by_name",
+    "get_rooms_by_owner",
     "get_user_by_id",
     "get_user_by_username",
     "get_user_count",
@@ -328,4 +379,5 @@ __all__ = [
     "update_room",
     "update_room_peak_online_members",
     "update_user",
+    "update_user_profile",
 ]

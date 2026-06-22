@@ -63,6 +63,37 @@ function applyHeadingIds(headingIds: string[]) {
   }
 }
 
+const SAFE_URL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:'])
+
+function sanitizeUrl(url: string | undefined): string | undefined {
+  if (!url) {
+    return undefined
+  }
+
+  const trimmed = url.trim()
+
+  // Allow in-page anchors and relative/protocol-relative links.
+  if (
+    trimmed.startsWith('#')
+    || trimmed.startsWith('/')
+    || trimmed.startsWith('./')
+    || trimmed.startsWith('../')
+  ) {
+    return trimmed
+  }
+
+  try {
+    const parsed = new URL(trimmed, window.location.origin)
+    if (SAFE_URL_PROTOCOLS.has(parsed.protocol)) {
+      return trimmed
+    }
+  } catch {
+    // Unparseable URLs are treated as unsafe.
+  }
+
+  return undefined
+}
+
 function renderInlineCode(children: ReactNode) {
   return (
     <code className="inline-code rounded bg-[#f6f6f7] px-1.5 py-0.5 text-[13px] font-semibold text-[#213547]">
@@ -184,16 +215,21 @@ function CodeBlockPre({ children, node: _node, ...props }: CodeBlockPreProps) {
 }
 
 const defaultComponents: Components = {
-  a: ({ children, href }) => (
-    <a
-      className="font-medium text-[#3451b2] underline-offset-2 hover:underline"
-      href={href}
-      target={href?.startsWith('#') ? undefined : '_blank'}
-      rel={href?.startsWith('#') ? undefined : 'noopener noreferrer'}
-    >
-      {children}
-    </a>
-  ),
+  a: ({ children, href }) => {
+    const safeHref = sanitizeUrl(href)
+    const isAnchor = safeHref?.startsWith('#')
+
+    return (
+      <a
+        className="font-medium text-[#3451b2] underline-offset-2 hover:underline"
+        href={safeHref}
+        target={isAnchor ? undefined : '_blank'}
+        rel={isAnchor ? undefined : 'noopener noreferrer'}
+      >
+        {children}
+      </a>
+    )
+  },
   p: ({ children }) => (
     <p className="text-[15px] leading-7 text-[#3c3c43]">{children}</p>
   ),
@@ -236,6 +272,14 @@ const defaultComponents: Components = {
   td: ({ children }) => (
     <td className="border border-[#e2e2e3] px-3 py-2">{children}</td>
   ),
+  img: ({ src, alt }) => {
+    const safeSrc = sanitizeUrl(typeof src === 'string' ? src : undefined)
+    if (!safeSrc) {
+      return <>{alt}</>
+    }
+
+    return <img src={safeSrc} alt={alt} loading="lazy" />
+  },
   hr: () => <hr className="border-[#e2e2e3]" />,
 }
 

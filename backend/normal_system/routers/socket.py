@@ -6,7 +6,7 @@ from normal_system.repositories import (
     get_user_by_id,
     get_room_by_id,
     create_message,
-    get_message_by_room,
+    get_messages_with_authors_by_room,
     serialize_message,
     update_room_peak_online_members,
 )
@@ -46,6 +46,7 @@ async def emit_room_members(room_id: int):
                     {
                         "id": user.id,
                         "username": user.username,
+                        "nickname": user.nickname,
                         "avatar_key": user.avatar_key,
                     }
                 )
@@ -143,11 +144,8 @@ async def join_room(sid: str, data: dict):
     await emit_room_members(room_id)
 
     async with async_session() as db:
-        messages = await get_message_by_room(db, room_id)
-        messages_data = [
-            serialize_message(msg).model_dump(mode="json")
-            for msg in messages
-        ]
+        messages = await get_messages_with_authors_by_room(db, room_id)
+        messages_data = [message.model_dump(mode="json") for message in messages]
 
     await sio.emit("previous_messages", messages_data, to=sid)
     print(f" 用户 {user_id} 加入房间 {room_id}")
@@ -223,7 +221,7 @@ async def leave_room(sid: str, data: dict):
                     db_message = await create_message(
                         db,
                         MessageCreate(
-                            content=f"-- {user.username} 离开了房间 --",
+                            content=f"-- {user.nickname or user.username} 离开了房间 --",
                             room_id=room_id,
                         ),
                         user_id=user_id,

@@ -2,6 +2,7 @@
  * @parm 组件用途：展示房间在线成员列表。
  */
 import type { RoomMember } from '@/types/chat'
+import { getUserDisplayName } from '@/utils/userDisplayName'
 
 interface RoomMemberListProps {
   members: RoomMember[]
@@ -17,7 +18,7 @@ export default function RoomMemberList({ members }: RoomMemberListProps) {
       {members.map((member) => (
         <li key={member.id} className="flex items-center gap-2 text-sm text-zinc-200">
           <span className="grid h-5 w-5 place-items-center rounded bg-zinc-800 text-[10px]">M</span>
-          <span>{member.username}</span>
+          <span>{getUserDisplayName(member)}</span>
         </li>
       ))}
     </ul>

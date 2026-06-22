@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { User, LoginResponse } from '../types/chat';
 import { socketManager } from '../socket/socketManager';
@@ -8,6 +8,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (data: LoginResponse) => void;
+  updateUser: (user: User) => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -39,23 +40,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [token]);
 
-  const login = (data: LoginResponse) => {
+  const login = useCallback((data: LoginResponse) => {
     setUser(data.user);
     setToken(data.access_token);
     localStorage.setItem('user', JSON.stringify(data.user));
     localStorage.setItem('access_token', data.access_token);
-  };
+  }, []);
 
-  const logout = () => {
+  const updateUser = useCallback((nextUser: User) => {
+    setUser(nextUser);
+    localStorage.setItem('user', JSON.stringify(nextUser));
+  }, []);
+
+  const logout = useCallback(() => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('user');
     localStorage.removeItem('access_token');
     socketManager.disconnect();
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({ user, token, login, updateUser, logout, isAuthenticated: !!token }),
+    [user, token, login, updateUser, logout],
+  );
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!token }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

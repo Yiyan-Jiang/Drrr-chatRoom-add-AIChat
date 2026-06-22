@@ -41,10 +41,11 @@ class Phase5APIContractTest(unittest.TestCase):
             ("/api/github/issues/{issue_number}/comments", "GET"),
             ("/api/rooms/", "POST"),
             ("/api/rooms/", "GET"),
+            ("/api/rooms/mine", "GET"),
             ("/api/rooms/viewers/count", "GET"),
-            ("/api/rooms/{room_id}", "GET"),
-            ("/api/rooms/{room_id}", "PATCH"),
-            ("/api/rooms/{room_id}", "DELETE"),
+            ("/api/rooms/{room_id:int}", "GET"),
+            ("/api/rooms/{room_id:int}", "PATCH"),
+            ("/api/rooms/{room_id:int}", "DELETE"),
             ("/api/messages/", "POST"),
             ("/api/messages/room/{room_id}", "GET"),
             ("/api/messages/room/{room_id}/page", "GET"),
@@ -54,6 +55,18 @@ class Phase5APIContractTest(unittest.TestCase):
         }
 
         self.assertTrue(expected_routes.issubset(routes))
+
+    def test_room_dynamic_routes_only_match_integer_ids(self):
+        main = self._load_main()
+        room_routes = [
+            route.path
+            for route in main.app.routes
+            if isinstance(route, APIRoute) and route.path.startswith("/api/rooms")
+        ]
+
+        self.assertIn("/api/rooms/mine", room_routes)
+        self.assertIn("/api/rooms/{room_id:int}", room_routes)
+        self.assertNotIn("/api/rooms/{room_id}", room_routes)
 
     def test_socket_events_keep_public_contract(self):
         from normal_system.routers import socket

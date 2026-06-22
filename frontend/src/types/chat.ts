@@ -8,6 +8,8 @@ export type AvatarKey = 'admin' | 'gray' | 'kanra' | 'pink' | 'setton' | 'tanaka
 export interface User {
   id: number;
   username: string;
+  nickname?: string | null;
+  bio?: string | null;
   avatar_key?: AvatarKey | string | null;
   created_at?: string;
 }
@@ -15,6 +17,7 @@ export interface User {
 export interface RoomOwner {
   id: number;
   username: string;
+  nickname?: string | null;
   avatar_key?: AvatarKey | string | null;
 }
 
@@ -67,6 +70,7 @@ export interface PaginatedMessagesResponse {
 export interface RoomMember {
   id: number;
   username: string;
+  nickname?: string | null;
   avatar_key?: AvatarKey | string;
 }
 
@@ -103,8 +107,9 @@ export interface LoginCredentials{
 }
 
 export interface UserUpdate {
-  username?: string;
-  password?: string;
+  nickname: string;
+  bio: string;
+  avatar_key?: AvatarKey | string;
 }
 
 export interface RegisterRequest {

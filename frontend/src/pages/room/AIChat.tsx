@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import type { AICharacter, Message } from '@/types/chat'
 import ChatMessageViewport from '@/components/chat/ChatMessageViewport'
 import ChatRoomHeader from '@/components/chat/ChatRoomHeader'
+import { getUserDisplayName } from '@/utils/userDisplayName'
 
 const CHARACTERS: { value: AICharacter; label: string; desc: string; avatarKey: string }[] = [
   { value: 'sakura', label: '小樱', desc: '傲娇系猫耳女仆', avatarKey: 'pink' },
@@ -37,7 +38,7 @@ function getCharacterMeta(character: AICharacter) {
 function toMessage(
   item: AIChatLogItem,
   character: AICharacter,
-  currentUser: { id: number; username: string; avatar_key?: string | null },
+  currentUser: { id: number; username: string; nickname?: string | null; avatar_key?: string | null },
 ): Message {
   const selectedCharacter = getCharacterMeta(character)
 
@@ -53,6 +54,7 @@ function toMessage(
         ? {
             id: currentUser.id,
             username: currentUser.username,
+            nickname: currentUser.nickname,
             avatar_key: currentUser.avatar_key,
           }
         : null,
@@ -88,7 +90,8 @@ export default function AIChat() {
   const selectedCharacter = getCharacterMeta(character)
   const currentUser = useMemo(() => ({
     id: user?.id ?? 1,
-    username: user?.username ?? '你',
+    username: getUserDisplayName(user, '你'),
+    nickname: user?.nickname,
     avatar_key: user?.avatar_key,
   }), [user])
   const historyLog = useMemo(() => historyItems.map((item) => ({

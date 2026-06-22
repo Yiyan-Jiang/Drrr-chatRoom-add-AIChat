@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { resolveChatAvatarAssets } from '@/assets/chatAvatarCatalog'
 import { images } from '@/assets/assets'
 import type { RoomMember, RoomWithMessages, UpdateRoomRequest } from '@/types/chat'
+import { getUserDisplayName } from '@/utils/userDisplayName'
 
 type RoomInfoForm = Required<UpdateRoomRequest>
 
@@ -80,13 +81,14 @@ export default function RoomInfoDrawer({
     normalizedForm.rules !== (room.rules ?? '')
 
   const isOwner = room.owner_id === currentUserId
-  const ownerName = room.owner?.username || (room.owner_id ? `用户${room.owner_id}` : '未设置')
+  const ownerName = room.owner?.username || (room.owner_id ? `user${room.owner_id}` : 'unset')
   const ownerAvatarKey = room.owner?.avatar_key ?? 'kanra'
+  const displayOwnerName = getUserDisplayName(room.owner, ownerName)
   const displayedMembers =
     members.length > 0
       ? members
       : room.owner
-        ? [{ id: room.owner.id, username: room.owner.username, avatar_key: room.owner.avatar_key ?? 'kanra' }]
+        ? [{ id: room.owner.id, username: room.owner.username, nickname: room.owner.nickname, avatar_key: room.owner.avatar_key ?? 'kanra' }]
         : []
 
   useEffect(() => {
@@ -182,8 +184,8 @@ export default function RoomInfoDrawer({
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="房主">
               <div className="flex items-center gap-2">
-                <MemberAvatar avatarKey={ownerAvatarKey} username={ownerName} />
-                <span>{ownerName}</span>
+                <MemberAvatar avatarKey={ownerAvatarKey} username={displayOwnerName} />
+                <span>{displayOwnerName}</span>
               </div>
             </Field>
             <Field label="创建时间">{new Date(room.created_at).toLocaleString('zh-CN')}</Field>
@@ -239,8 +241,8 @@ export default function RoomInfoDrawer({
             <ul className="max-h-36 space-y-2 overflow-y-auto pr-1">
               {displayedMembers.map((member) => (
                 <li key={member.id} className="flex items-center gap-2 text-sm text-zinc-200">
-                  <MemberAvatar avatarKey={member.avatar_key} username={member.username} />
-                  <span>{member.username}</span>
+                  <MemberAvatar avatarKey={member.avatar_key} username={getUserDisplayName(member)} />
+                  <span>{getUserDisplayName(member)}</span>
                 </li>
               ))}
             </ul>

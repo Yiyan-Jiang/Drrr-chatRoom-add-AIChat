@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS chatRoom_user (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(64) UNIQUE,
   password VARCHAR(128),
+  nickname VARCHAR(64) NOT NULL,
+  bio VARCHAR(200) NOT NULL DEFAULT '',
   avatar_key VARCHAR(32) NOT NULL DEFAULT 'kanra',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_chatRoom_user_avatar_key (avatar_key)

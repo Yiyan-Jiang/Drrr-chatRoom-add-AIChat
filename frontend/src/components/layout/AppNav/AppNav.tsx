@@ -2,8 +2,14 @@
  * @parm 组件用途：展示顶部快速进入房间的导航输入。
  */
 import type { FormEvent } from 'react'
+import { resolveChatAvatarAssets } from '@/assets/chatAvatarCatalog'
+import { useAuth } from '@/contexts/AuthContext'
+import { getUserDisplayName } from '@/utils/userDisplayName'
 
 export default function AppNav() {
+  const { user } = useAuth()
+  const avatarAssets = resolveChatAvatarAssets(user?.avatar_key)
+
   const handleSearch = async (event: FormEvent) => {
     event.preventDefault()
     alert('还没做喔')
@@ -24,7 +30,11 @@ export default function AppNav() {
 
         <div>DOLLARS 移动版</div>
 
-        <div>头像</div>
+        <img
+          src={avatarAssets.avatar}
+          alt={user ? `${getUserDisplayName(user)}的头像` : '用户头像'}
+          className="h-8 w-8 object-cover"
+        />
       </div>
     </div>
   )

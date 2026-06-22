@@ -6,6 +6,10 @@ import { test } from 'node:test'
 const articleDetailPath = resolve(process.cwd(), 'src/pages/subPage/NewsArticleDetail.tsx')
 const markdownArticlePath = resolve(process.cwd(), 'src/features/news/MarkdownArticle.tsx')
 const markdownRendererPath = resolve(process.cwd(), 'src/features/news/markdownRenderer.tsx')
+const messageBoardMarkdownRendererPath = resolve(
+  process.cwd(),
+  'src/features/messageBoard/markdownRenderer.tsx',
+)
 const newsAnchorPath = resolve(process.cwd(), 'src/features/news/newsAnchor.ts')
 const articleTocPath = resolve(process.cwd(), 'src/features/news/ArticleToc.tsx')
 const newsDocumentsPath = resolve(process.cwd(), 'src/features/news/newsDocuments.ts')
@@ -18,6 +22,11 @@ test('news article detail page and route are wired to static Markdown documents'
   assert.equal(existsSync(articleDetailPath), true, 'NewsArticleDetail page should exist.')
   assert.equal(existsSync(markdownArticlePath), true, 'MarkdownArticle renderer should exist.')
   assert.equal(existsSync(markdownRendererPath), true, 'Shared markdown renderer should exist.')
+  assert.equal(
+    existsSync(messageBoardMarkdownRendererPath),
+    true,
+    'Message board markdown renderer should exist.',
+  )
   assert.equal(existsSync(newsAnchorPath), true, 'Shared anchor scroll helper should exist.')
   assert.equal(existsSync(articleTocPath), true, 'ArticleToc component should exist.')
 
@@ -26,6 +35,7 @@ test('news article detail page and route are wired to static Markdown documents'
   const routerSource = readFileSync(routerPath, 'utf8')
   const markdownSource = readFileSync(markdownArticlePath, 'utf8')
   const rendererSource = readFileSync(markdownRendererPath, 'utf8')
+  const messageBoardRendererSource = readFileSync(messageBoardMarkdownRendererPath, 'utf8')
   const newsAnchorSource = readFileSync(newsAnchorPath, 'utf8')
   const tocSource = readFileSync(articleTocPath, 'utf8')
   const indexCssSource = readFileSync(indexCssPath, 'utf8')
@@ -107,7 +117,7 @@ test('news article detail page and route are wired to static Markdown documents'
   assert.match(indexCssSource, /scroll-behavior:\s*smooth/)
   assert.match(indexCssSource, /article-toc-scrollbar/)
 
-  assert.match(messageBoardSource, /MarkdownRenderer/)
+  assert.match(messageBoardSource, /MessageBoardMarkdownRenderer/)
   assert.match(messageBoardSource, /navigate\(`\/board\/\$\{issue\.number\}`\)/)
   assert.match(messageBoardSource, /line-clamp-3/)
   assert.doesNotMatch(messageBoardSource, /max-h-36/)
@@ -118,6 +128,10 @@ test('news article detail page and route are wired to static Markdown documents'
   )
   assert.doesNotMatch(messageBoardSource, /remarkGfm/)
   assert.doesNotMatch(messageBoardSource, /code: \(\{ children \}\) => \(/)
+  assert.match(messageBoardRendererSource, /remarkGfm/)
+  assert.match(messageBoardRendererSource, /github-dark/)
+  assert.match(messageBoardRendererSource, /text-zinc-300/)
+  assert.match(messageBoardRendererSource, /bg-zinc-950/)
   assert.match(messageBoardDetailSource, /MarkdownRenderer/)
   assert.match(messageBoardDetailSource, /logoSource/)
   assert.match(messageBoardDetailSource, /min-h-screen bg-\[#f6f6f7\] pt-14 text-\[#213547\]/)
