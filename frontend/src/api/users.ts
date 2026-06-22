@@ -2,8 +2,9 @@ import { apiClient } from "./client";
 import type { User, Usercnt } from '../types/chat'
 
 export interface UserUpdate {
-  username?: string;
-  password?: string;
+  nickname: string;
+  bio: string;
+  avatar_key?: string;
 }
 
 export interface RegisterRequest {
@@ -22,6 +23,16 @@ export const usersApi = {
   // 用户注册
   register: async (data: RegisterRequest): Promise<User> => {
     const { data: user } = await apiClient.post<User>('/users/register',data)
+    return user
+  },
+
+  getMe: async (): Promise<User> => {
+    const { data } = await apiClient.get<User>('/users/me')
+    return data
+  },
+
+  updateMe: async (data: UserUpdate): Promise<User> => {
+    const { data: user } = await apiClient.put<User>('/users/me', data)
     return user
   },
 

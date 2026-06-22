@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { githubIssuesApi } from '@/api'
 import type { MessageBoardIssue } from '@/api'
-import { MarkdownRenderer } from '@/features/news/markdownRenderer'
+import { MessageBoardMarkdownRenderer } from '@/features/messageBoard/markdownRenderer'
 
 type LoadState = 'idle' | 'loading' | 'success' | 'error'
 
@@ -142,7 +142,7 @@ export default function MessageBoard() {
 
                     {issue.body ? (
                       <div className="mt-3 line-clamp-3 text-sm leading-6 text-zinc-300">
-                        <MarkdownRenderer markdown={issue.body} />
+                        <MessageBoardMarkdownRenderer markdown={issue.body} />
                       </div>
                     ) : (
                       <p className="mt-3 text-sm text-zinc-500">这个 issue 没有正文。</p>

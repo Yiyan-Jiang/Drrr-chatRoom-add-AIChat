@@ -21,6 +21,11 @@ export const roomApi = {
     return data
   },
 
+  listMine: async (): Promise<Room[]> => {
+    const { data } = await apiClient.get<Room[]>('/rooms/mine')
+    return data
+  },
+
   getViewerCount: async (): Promise<Usercnt> => {
     const { data } = await apiClient.get<Usercnt>('/rooms/viewers/count')
     return data

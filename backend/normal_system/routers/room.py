@@ -13,6 +13,7 @@ from normal_system.repositories import (
     delete_room,
     get_message_by_room,
     get_all_rooms,
+    get_rooms_by_owner,
     update_room,
 )
 from normal_system.routers.socket import room_presence, sio
@@ -23,6 +24,26 @@ router = APIRouter(prefix="/rooms", tags=["rooms"])
 async def get_db():
     async with async_session() as session:
         yield session
+
+
+async def _to_room_response(db: AsyncSession, room) -> RoomInDB:
+    owner = await get_user_by_id(db, room.owner_id) if room.owner_id else None
+    return RoomInDB(
+        id=room.id,
+        name=room.name,
+        description=room.description or "",
+        notice=room.notice or "",
+        rules=room.rules or "",
+        tags=room.tags or [],
+        min_age=room.min_age,
+        max_age=room.max_age,
+        max_members=room.max_members,
+        peak_online_members=room.peak_online_members,
+        online_members=room_presence.count(room.id),
+        owner_id=room.owner_id,
+        owner=RoomOwner.model_validate(owner) if owner else None,
+        created_at=room.created_at,
+    )
 
 
 @router.post("/", response_model=RoomInDB, status_code=status.HTTP_201_CREATED)
@@ -61,25 +82,16 @@ async def list_rooms(
         limit: int = Query(50, ge=1, le=200, description="最多返回多少条"),
 ):
     rooms = await get_all_rooms(db, skip=skip, limit=limit)
-    return [
-        RoomInDB(
-            id=room.id,
-            name=room.name,
-            description=room.description,
-            notice=room.notice or "",
-            rules=room.rules or "",
-            tags=room.tags,
-            min_age=room.min_age,
-            max_age=room.max_age,
-            max_members=room.max_members,
-            peak_online_members=room.peak_online_members,
-            online_members=room_presence.count(room.id),
-            owner_id=room.owner_id,
-            owner=RoomOwner.model_validate(await get_user_by_id(db, room.owner_id)) if room.owner_id else None,
-            created_at=room.created_at,
-        )
-        for room in rooms
-    ]
+    return [await _to_room_response(db, room) for room in rooms]
+
+
+@router.get("/mine", response_model=List[RoomInDB])
+async def list_my_rooms(
+        db: AsyncSession = Depends(get_db),
+        user_id: int = Depends(get_current_user_id),
+):
+    rooms = await get_rooms_by_owner(db, owner_id=user_id)
+    return [await _to_room_response(db, room) for room in rooms]
 
 
 @router.get("/viewers/count")
@@ -111,7 +123,7 @@ async def get_room_by_name_endpoint(name: str, db: AsyncSession = Depends(get_db
     )
 
 
-@router.get("/{room_id}", response_model=RoomWithMessages)
+@router.get("/{room_id:int}", response_model=RoomWithMessages)
 async def get_room_detail(room_id: int, db: AsyncSession = Depends(get_db)):
     room = await get_room_by_id(db, room_id)
     if not room:
@@ -139,7 +151,7 @@ async def get_room_detail(room_id: int, db: AsyncSession = Depends(get_db)):
     )
 
 
-@router.patch("/{room_id}")
+@router.patch("/{room_id:int}")
 async def update_existing_room(
         room_id: int,
         room_update: RoomUpdate,
@@ -157,7 +169,7 @@ async def update_existing_room(
     return updated
 
 
-@router.delete("/{room_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{room_id:int}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_existing_room(
         room_id: int,
         db: AsyncSession = Depends(get_db),

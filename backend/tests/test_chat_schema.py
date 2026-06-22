@@ -5,6 +5,7 @@ from normal_system.schemas import (
     PaginatedMessagesResponse,
     RoomInDB,
     UserPublic,
+    UserProfileUpdate,
 )
 
 
@@ -17,6 +18,20 @@ class ChatSchemaTest(unittest.TestCase):
         )
 
         self.assertEqual(user.avatar_key, "kanra")
+        self.assertEqual(user.nickname, "alice")
+        self.assertEqual(user.bio, "")
+
+    def test_user_profile_update_requires_nickname_and_limits_bio(self):
+        update = UserProfileUpdate(nickname="  Alice  ", bio="hello")
+
+        self.assertEqual(update.nickname, "Alice")
+        self.assertEqual(update.bio, "hello")
+
+        with self.assertRaises(Exception):
+            UserProfileUpdate(nickname="   ", bio="")
+
+        with self.assertRaises(Exception):
+            UserProfileUpdate(nickname="Alice", bio="x" * 201)
 
     def test_room_response_contains_owner_id_and_owner(self):
         owner = UserPublic(

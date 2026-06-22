@@ -15,6 +15,7 @@ from normal_system.schemas.user import (
     UserCountResponse,
     UserCreate,
     UserInDB,
+    UserProfileUpdate,
     UserPublic,
     UserUpdate,
 )
@@ -33,6 +34,7 @@ __all__ = [
     "UserCountResponse",
     "UserCreate",
     "UserInDB",
+    "UserProfileUpdate",
     "UserPublic",
     "UserUpdate",
 ]

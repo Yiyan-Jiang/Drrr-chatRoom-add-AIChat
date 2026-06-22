@@ -13,9 +13,18 @@ ROOM_NAME_PATTERN = re.compile(r"^[\u4e00-\u9fa5A-Za-z0-9_]{1,8}$")
 class RoomOwner(BaseModel):
     id: int
     username: str
+    nickname: Optional[str] = Field(default=None, validate_default=True)
     avatar_key: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("nickname", mode="before")
+    @classmethod
+    def default_nickname_to_username(cls, value, info):
+        if isinstance(value, str) and value.strip():
+            return value
+        username = info.data.get("username")
+        return username if isinstance(username, str) else value
 
 
 class RoomBase(BaseModel):

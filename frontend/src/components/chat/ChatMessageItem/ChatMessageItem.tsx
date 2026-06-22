@@ -4,6 +4,7 @@
 import { resolveChatAvatarAssets } from '@/assets/chatAvatarCatalog'
 import type { CSSProperties } from 'react'
 import type { Message } from '@/types/chat'
+import { getUserDisplayName } from '@/utils/userDisplayName'
 
 import './index.css'
 
@@ -23,7 +24,7 @@ interface ChatMessageItemProps {
 export default function ChatMessageItem({ message, isOwn }: ChatMessageItemProps) {
   const author = message.author
   const assets = resolveChatAvatarAssets(author?.avatar_key)
-  const displayName = isOwn ? '你' : author?.username || (message.user_id ? `用户${message.user_id}` : '系统')
+  const displayName = isOwn ? '你' : getUserDisplayName(author, message.user_id ? `用户${message.user_id}` : '系统')
 
   return (
     <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
