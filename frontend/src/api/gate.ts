@@ -1,9 +1,11 @@
 import { apiClient } from './client';
 import { AxiosError } from 'axios';
+import { logger } from '@/utils/logger';
 
 export const gateApi = {
+  // gate 提交密码表单
   verify: async (password: string) => {
-    console.log('[DEBUG] Gate verify request - password:', password);
+    logger.debug('[gate] verify request', { hasPassword: Boolean(password) });
     const params = new URLSearchParams();
     params.append('password', password);
     try {
@@ -13,25 +15,32 @@ export const gateApi = {
         },
         withCredentials: true,
       });
-      console.log('[DEBUG] Gate verify response:', data);
+      logger.debug('[gate] verify response received');
       return data;
     } catch (error: unknown) {
-      console.error('[DEBUG] Gate verify error:', error);
+      logger.error('[gate] verify error', {
+        status: error instanceof AxiosError ? error.response?.status : undefined,
+        message: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   },
+  // gate 状态验证
   check: async () => {
-    console.log('[DEBUG] Gate check request');
+    logger.debug('[gate] status request');
     try {
       const { data } = await apiClient.get('/gate/status', {
         withCredentials: true,
       });
-      console.log('[DEBUG] Gate check response:', data);
+      logger.debug('[gate] status response received');
       return data;
     } catch (error: unknown) {
-      console.error('[DEBUG] Gate check error:', error);
+      logger.error('[gate] status error', {
+        status: error instanceof AxiosError ? error.response?.status : undefined,
+        message: error instanceof Error ? error.message : String(error),
+      });
       if (error instanceof AxiosError) {
-        console.error('[DEBUG] Error details:', error.response?.status, error.response?.data);
+        logger.debug('[gate] status error details', { status: error.response?.status });
       }
       throw error;
     }

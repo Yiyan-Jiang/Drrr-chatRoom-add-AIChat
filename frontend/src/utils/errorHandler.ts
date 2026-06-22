@@ -1,6 +1,7 @@
 /**
  * 统一错误处理工具
  */
+import { logger } from './logger';
 
 interface AxiosError {
   response?: {
@@ -68,10 +69,10 @@ export function handleApiError(
     import('react-hot-toast').then(({ default: toast }) => {
       toast.error(message);
     }).catch(() => {
-      console.error('显示toast失败:', message);
+      logger.error('显示toast失败:', { message });
     });
   }
   
-  console.error('API错误:', error);
+  logger.error('API错误:', { message });
   return message;
 }

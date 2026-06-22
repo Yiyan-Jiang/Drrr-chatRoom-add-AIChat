@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Usercnt } from '../types/chat' 
 import { usersApi } from "../api/users";
+import { logger } from '../utils/logger';
 
 export function useUserCount() {
   const [ data, setData ] = useState<Usercnt | null>(null)
@@ -18,7 +19,9 @@ export function useUserCount() {
         setData(res)
       } 
     }catch(err) {
-      console.error(err);
+      logger.error('获取用户数量失败', {
+        message: err instanceof Error ? err.message : String(err),
+      });
       if(!cancelledRef.current){
         setError('获取失败')
       }

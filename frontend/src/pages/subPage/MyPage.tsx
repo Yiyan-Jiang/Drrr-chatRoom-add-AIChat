@@ -6,6 +6,7 @@ import { usersApi } from '@/api/users'
 import { roomApi } from '@/api/rooms'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Room } from '@/types/chat'
+import { logger } from '@/utils/logger'
 
 type ProfileForm = {
   nickname: string
@@ -54,7 +55,9 @@ export default function MyPage() {
         setOwnedRooms(rooms)
         setForm(toForm(currentUser))
       } catch (error) {
-        console.error('[profile] failed to load current user', error)
+        logger.error('[profile] failed to load current user', {
+          message: error instanceof Error ? error.message : String(error),
+        })
         if (!cancelled) toast.error('加载资料失败')
       } finally {
         if (!cancelled) setLoading(false)
@@ -116,7 +119,9 @@ export default function MyPage() {
       setEditing(false)
       toast.success('资料已保存')
     } catch (error) {
-      console.error('[profile] failed to save current user', error)
+      logger.error('[profile] failed to save current user', {
+        message: error instanceof Error ? error.message : String(error),
+      })
       toast.error('保存失败')
     } finally {
       setSaving(false)

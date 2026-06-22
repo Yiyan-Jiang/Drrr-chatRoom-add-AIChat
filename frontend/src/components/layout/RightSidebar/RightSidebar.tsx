@@ -4,6 +4,7 @@
 import { Link } from 'react-router-dom'
 import { resolveChatAvatarAssets } from '@/assets/chatAvatarCatalog'
 import type { AICharacter } from '@/types/chat'
+import { logger } from '@/utils/logger'
 
 type AICharacterItem = {
   id: AICharacter
@@ -21,7 +22,7 @@ const AI_CHARACTERS: AICharacterItem[] = [
 export default function RightSidebar() {
   const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    console.log('接口待实现')
+    logger.debug('搜索接口待实现')
   }
 
   return (

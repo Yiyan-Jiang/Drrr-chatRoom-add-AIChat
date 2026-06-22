@@ -1,9 +1,11 @@
 import { io, Socket } from 'socket.io-client'
-import type { Message, RoomDeletedEvent, RoomMembersEvent } from "../types/chat";
+import type { Message, RoomDeletedEvent, RoomMembersEvent } from '@/types/chat'
+import { logger } from '@/utils/logger'
 
 const SOCKET_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 type RoomMemberCount = { room_id: number; online_members: number };
 
+// 全局Socket实例
 let socketInstance: Socket | null = null;
 let currentToken: string | null = null;
 
@@ -33,22 +35,22 @@ export const socketManager = {
     });
 
     socketInstance.on('connect', () => {
-      console.log('Socket连接成功');
+      logger.debug('Socket连接成功');
     });
 
     socketInstance.on('disconnect', (reason) => {
-      console.log('Socket断开连接:', reason);
+      logger.debug('Socket断开连接:', reason);
       if (reason === 'io server disconnect') {
         // 服务器主动断开，可能需要重新认证
-        console.log('服务器主动断开连接，可能需要重新登录');
+        logger.debug('服务器主动断开连接，可能需要重新登录');
       }
     });
 
     socketInstance.on('connect_error', (error) => {
-      console.error('Socket连接错误:', error.message);
+      logger.error('Socket连接错误:', { message: error.message });
       // 连接错误可能是token无效
       if (error.message.includes('auth') || error.message.includes('token')) {
-        console.error('认证失败，请重新登录');
+        logger.error('认证失败，请重新登录');
         // 清除token并跳转到登录页
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
@@ -59,7 +61,7 @@ export const socketManager = {
     });
 
     socketInstance.on('error', (err: { message: string }) => {
-      console.error('Socket错误:', err.message);
+      logger.error('Socket错误:', { message: err.message });
     });
 
     return socketInstance;

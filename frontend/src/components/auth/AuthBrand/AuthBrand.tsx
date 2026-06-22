@@ -6,7 +6,7 @@ import bannerUrl from '@/assets/icon/Logo/banner-80x15.png'
 
 interface AuthBrandProps {
   logoSizeClassName: string
-  showBanner?: boolean
+  showBanner?: boolean // 小的横幅展示逻辑，为true时候展示
   title?: string
 }
 
