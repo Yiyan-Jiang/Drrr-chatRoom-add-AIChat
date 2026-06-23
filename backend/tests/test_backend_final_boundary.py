@@ -32,8 +32,15 @@ class BackendFinalBoundaryTest(unittest.TestCase):
     def test_main_imports_final_router_boundaries_directly(self):
         main = (self.root / "main.py").read_text(encoding="utf-8")
 
-        self.assertIn("from ai.routers.chat import router as ai_router", main)
-        self.assertIn("from normal_system.routers import", main)
+        self.assertIn("from app_factory import socketio_app", main)
+        self.assertNotIn("from ai.database import init_ai_db", main)
+        self.assertNotIn("from normal_system.bootstrap import init_db", main)
+        self.assertNotIn("from fastapi.middleware.cors import CORSMiddleware", main)
+        self.assertNotIn("include_router(", main)
+        self.assertNotIn("tags_metadata", main)
+        self.assertNotIn("async def lifespan", main)
+        self.assertNotIn("from ai.routers.chat import router as ai_router", main)
+        self.assertNotIn("from normal_system.routers import", main)
         self.assertNotIn("from routers import", main)
 
     def test_room_presence_lives_under_normal_system_services(self):
