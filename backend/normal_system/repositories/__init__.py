@@ -105,6 +105,9 @@ async def delete_user(db: AsyncSession, user_id: int) -> bool:
     db_user = await get_user_by_id(db, user_id)
     if not db_user:
         return False
+    owned_room_ids = select(Room.id).where(Room.owner_id == user_id)
+    await db.execute(delete(Message).where(Message.room_id.in_(owned_room_ids)))
+    await db.execute(delete(Room).where(Room.owner_id == user_id))
     await db.delete(db_user)
     await db.commit()
     return True

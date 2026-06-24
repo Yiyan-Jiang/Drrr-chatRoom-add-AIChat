@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { chatAvatarCatalog, resolveChatAvatarAssets } from '@/assets/chatAvatarCatalog'
 import { usersApi } from '@/api/users'
@@ -13,6 +13,8 @@ type ProfileForm = {
   bio: string
   avatarKey: string
 }
+
+type ConfirmAction = 'logout' | 'delete' | null
 
 function toForm(user: ReturnType<typeof useAuth>['user']): ProfileForm {
   return {
@@ -32,13 +34,16 @@ function formatDate(value?: string): string {
 }
 
 export default function MyPage() {
-  const { user, updateUser } = useAuth()
+  const { user, updateUser, logout } = useAuth()
+  const navigate = useNavigate()
   const [form, setForm] = useState<ProfileForm>(() => toForm(user))
   const [ownedRooms, setOwnedRooms] = useState<Room[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [deletingAccount, setDeletingAccount] = useState(false)
   const [editing, setEditing] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null)
   const avatarAssets = resolveChatAvatarAssets(form.avatarKey || user?.avatar_key)
 
   useEffect(() => {
@@ -83,6 +88,15 @@ export default function MyPage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [pickerOpen])
 
+  useEffect(() => {
+    if (!confirmAction) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !deletingAccount) setConfirmAction(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [confirmAction, deletingAccount])
+
   const normalizedForm = useMemo(
     () => ({
       nickname: form.nickname.trim(),
@@ -95,7 +109,8 @@ export default function MyPage() {
     normalizedForm.nickname !== (user?.nickname || user?.username || '') ||
     normalizedForm.bio !== (user?.bio || '') ||
     normalizedForm.avatarKey !== (user?.avatar_key ?? '')
-  const canSave = normalizedForm.nickname.length > 0 && normalizedForm.bio.length <= 200 && hasChanges && !saving
+  const canSave =
+    normalizedForm.nickname.length > 0 && normalizedForm.bio.length <= 200 && hasChanges && !saving && !deletingAccount
 
   const handleSave = async () => {
     if (!normalizedForm.nickname) {
@@ -132,6 +147,43 @@ export default function MyPage() {
     setForm(toForm(user))
     setPickerOpen(false)
     setEditing(false)
+  }
+
+  const handleLogout = () => {
+    setConfirmAction('logout')
+  }
+
+  const handleDeleteAccount = async () => {
+    if (!user || deletingAccount) return
+
+    setDeletingAccount(true)
+    try {
+      await usersApi.delete(user.id)
+      toast.success('账号已注销')
+      logout()
+      navigate('/login', { replace: true })
+    } catch (error) {
+      logger.error('[profile] failed to delete current user', {
+        message: error instanceof Error ? error.message : String(error),
+      })
+      toast.error('注销账号失败')
+    } finally {
+      setDeletingAccount(false)
+      setConfirmAction(null)
+    }
+  }
+
+  const handleConfirmAction = async () => {
+    if (confirmAction === 'logout') {
+      setConfirmAction(null)
+      logout()
+      navigate('/login', { replace: true })
+      return
+    }
+
+    if (confirmAction === 'delete') {
+      await handleDeleteAccount()
+    }
   }
 
   if (loading && !user) {
@@ -174,6 +226,23 @@ export default function MyPage() {
     { label: '累计峰值', value: totalPeak },
     { label: '加入天数', value: joinedDays ?? '-' },
   ]
+
+  const confirmDialog =
+    confirmAction === 'logout'
+      ? {
+          title: '退出登录',
+          description: '确定要退出当前账号吗？退出后需要重新登录才能继续使用聊天室。',
+          confirmText: '退出登录',
+          danger: false,
+        }
+      : confirmAction === 'delete'
+        ? {
+            title: '注销账号',
+            description: '确定要注销当前账号吗？账号资料会被删除，此操作不可恢复。',
+            confirmText: deletingAccount ? '注销中...' : '确认注销',
+            danger: true,
+          }
+        : null
 
   return (
     <div className="h-full min-h-0 overflow-auto bg-[#090909] text-zinc-100">
@@ -268,7 +337,7 @@ export default function MyPage() {
         </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
           {editing ? (
             <>
               <button
@@ -281,7 +350,7 @@ export default function MyPage() {
               </button>
               <button
                 type="button"
-                disabled={saving}
+                disabled={saving || deletingAccount}
                 onClick={handleCancelEdit}
                 className="h-9 rounded-lg border border-zinc-800 px-5 text-sm text-zinc-300 transition hover:border-zinc-600 disabled:cursor-not-allowed disabled:text-zinc-700"
               >
@@ -292,11 +361,28 @@ export default function MyPage() {
             <button
               type="button"
               onClick={() => setEditing(true)}
+              disabled={deletingAccount}
               className="h-9 rounded-lg border border-zinc-800 px-5 text-sm text-zinc-300 transition hover:border-zinc-500 hover:text-zinc-100"
             >
               编辑
             </button>
           )}
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={saving || deletingAccount}
+            className="h-9 rounded-lg border border-zinc-800 px-5 text-sm text-zinc-300 transition hover:border-zinc-500 hover:text-zinc-100 disabled:cursor-not-allowed disabled:text-zinc-700"
+          >
+            退出登录
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirmAction('delete')}
+            disabled={!user || saving || deletingAccount}
+            className="h-9 rounded-lg border border-red-900/70 px-5 text-sm text-red-300 transition hover:border-red-500 hover:text-red-100 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:text-zinc-700"
+          >
+            {deletingAccount ? '注销中...' : '注销账号'}
+          </button>
         </div>
       </section>
 
@@ -418,6 +504,52 @@ export default function MyPage() {
           </div>
         )}
       </section>
+
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/70"
+            aria-label="关闭确认弹窗"
+            onClick={() => {
+              if (!deletingAccount) setConfirmAction(null)
+            }}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="profile-confirm-title"
+            className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl shadow-black/60"
+          >
+            <h3 id="profile-confirm-title" className="text-lg font-semibold text-zinc-100">
+              {confirmDialog.title}
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-400">{confirmDialog.description}</p>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmAction(null)}
+                disabled={deletingAccount}
+                className="h-9 rounded-lg border border-zinc-800 px-4 text-sm text-zinc-300 transition hover:border-zinc-600 disabled:cursor-not-allowed disabled:text-zinc-700"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmAction}
+                disabled={confirmAction === 'delete' && deletingAccount}
+                className={`h-9 rounded-lg px-4 text-sm font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed ${
+                  confirmDialog.danger
+                    ? 'bg-red-500 text-white hover:bg-red-400 disabled:bg-red-950 disabled:text-red-900'
+                    : 'bg-zinc-100 text-black hover:bg-white disabled:bg-zinc-800 disabled:text-zinc-600'
+                }`}
+              >
+                {confirmDialog.confirmText}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   )
