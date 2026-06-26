@@ -37,8 +37,8 @@ test('builds profile stats from owned rooms and account date', () => {
   )
 
   assert.deepEqual(stats, [
-    { label: '创建房间', value: 3 },
-    { label: '累计峰值', value: 12 },
+    { label: '发布', value: 3 },
+    { label: '评论', value: 12 },
     { label: '加入天数', value: 4 },
   ])
 })
