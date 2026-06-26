@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from common.dependencies import get_current_user_id
+from common.dependencies import get_current_user_id, require_gate_passed
 from common.normal_database import async_session
 from normal_system.schemas import (
     UserCreate,
@@ -37,7 +37,11 @@ async def get_count(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/register", response_model=UserInDB, status_code=status.HTTP_201_CREATED)
-async def register_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
+async def register_user(
+    user: UserCreate,
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_gate_passed),
+):
     try:
         db_user = await create_user(db, user)
         return db_user

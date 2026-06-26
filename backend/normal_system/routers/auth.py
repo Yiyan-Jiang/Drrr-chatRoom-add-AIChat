@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.auth import create_access_token
+from common.dependencies import require_gate_passed
 from common.normal_database import async_session
 from normal_system.repositories import get_user_by_username
 from normal_system.schemas import LoginRequest, LoginResponse, UserPublic
@@ -18,7 +19,11 @@ async def get_db():
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(
+    payload: LoginRequest,
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_gate_passed),
+):
     user = await get_user_by_username(db, payload.username)
     if user is None:
         raise HTTPException(
