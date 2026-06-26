@@ -11,59 +11,52 @@ type OwnedRoomsSectionProps = {
 
 export function OwnedRoomsSection({ rooms }: OwnedRoomsSectionProps) {
   return (
-    <section className="flex flex-col gap-4">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-lg font-semibold tracking-tight">我创建的房间</h2>
-        <span className="font-mono text-sm tabular-nums text-zinc-500">{rooms.length} 个</span>
+    <section className="mt-4 rounded-sm border border-zinc-700 bg-black/80">
+      <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
+        <h2 className="text-sm font-semibold tracking-normal text-white">最近发布</h2>
+        <Link to="/home/rooms" className="text-xs text-zinc-400 transition hover:text-white">
+          查看更多 〉
+        </Link>
       </div>
 
       {rooms.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-zinc-800 px-6 py-12 text-center">
+        <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
           <p className="text-sm font-medium text-zinc-300">还没有创建房间</p>
           <p className="max-w-sm text-xs leading-relaxed text-zinc-500">
-            创建一个属于你的聊天室，邀请大家一起聊天、分享与讨论。
+            创建一个安静的房间，等待想聊天的人加入。
           </p>
           <Link
             to="/home/rooms"
-            className="mt-1 inline-flex h-9 items-center rounded-lg bg-zinc-100 px-5 text-sm font-semibold text-black transition active:scale-[0.98]"
+            className="mt-1 inline-flex h-9 items-center rounded-sm border border-zinc-500 px-5 text-sm font-semibold text-zinc-100 transition hover:bg-zinc-100 hover:text-black"
           >
-            去创建房间
+            创建房间
           </Link>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="divide-y divide-zinc-900">
           {rooms.map((room) => (
             <Link
               key={room.id}
               to={`/chat/${room.id}`}
-              className="group flex flex-col rounded-xl border border-zinc-800 bg-zinc-950/40 p-4 transition hover:border-zinc-600 hover:bg-zinc-900/40"
+              className="grid gap-4 px-3 py-3 transition hover:bg-zinc-950 sm:grid-cols-[128px_minmax(0,1fr)_180px]"
             >
-              <div className="truncate text-sm font-semibold text-zinc-100">{room.name}</div>
-              <div className="mt-1 line-clamp-2 text-xs leading-relaxed text-zinc-500">
-                {room.description || '暂无简介'}
-              </div>
-
-              {room.tags.length > 0 && (
-                <div className="mt-2.5 flex flex-wrap gap-1.5">
-                  {room.tags.slice(0, 3).map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border border-zinc-800 bg-zinc-900/60 px-2 py-0.5 text-[10px] text-zinc-400"
-                    >
-                      {tag}
-                    </span>
-                  ))}
+              <div className="aspect-[16/9] rounded-sm border border-zinc-800 bg-[radial-gradient(circle_at_30%_30%,#3f3f46,#09090b_55%,#000)] grayscale" />
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-sm border border-zinc-600 px-2 py-0.5 text-xs text-zinc-300">
+                    {room.tags[0] || '闲聊'}
+                  </span>
+                  <h3 className="truncate text-base font-semibold text-zinc-100">{room.name}</h3>
                 </div>
-              )}
-
-              <div className="mt-3 flex items-center justify-between font-mono text-xs tabular-nums text-zinc-500">
-                <span className="flex items-center gap-1.5">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500/70" />
-                  {room.online_members ?? 0} / {room.max_members}
-                </span>
-                <span className="text-zinc-600">峰值 {room.peak_online_members}</span>
+                <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-zinc-400">
+                  {room.description || '夜猫子集合，慢慢聊。'}
+                </p>
               </div>
-              <div className="mt-1.5 text-[11px] text-zinc-600">{formatProfileDate(room.created_at)} 创建</div>
+              <div className="flex items-center justify-start gap-5 font-mono text-xs tabular-nums text-zinc-400 sm:justify-end">
+                <span>COM {room.online_members ?? 0}</span>
+                <span>LIKE {room.peak_online_members}</span>
+                <span>{formatProfileDate(room.created_at)}</span>
+              </div>
             </Link>
           ))}
         </div>

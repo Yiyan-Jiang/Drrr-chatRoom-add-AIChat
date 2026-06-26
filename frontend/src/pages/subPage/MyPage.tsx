@@ -176,30 +176,114 @@ export default function MyPage() {
   const displayName = user?.nickname || user?.username || '我的页面'
   const stats = buildProfileStats(ownedRooms, user?.created_at)
   const confirmDialog = buildConfirmDialog(confirmAction, deletingAccount)
+  const profileRows = [
+    ['用户ID', String(user?.id ?? '-')],
+    ['注册日', user?.created_at ? new Intl.DateTimeFormat('zh-CN').format(new Date(user.created_at)) : '-'],
+    ['最后登录', '在线'],
+    ['地区', '未公开'],
+    ['一句话', user?.bio?.trim() || '夜晚很安静，想和某个人聊聊天。'],
+  ]
+  const visitors = [
+    { name: 'silent', time: '2小时前' },
+    { name: '白夜', time: '5小时前' },
+    { name: 'anime_love', time: '昨天' },
+    { name: 'void', time: '2天前' },
+  ]
 
   return (
-    <div className="h-full min-h-0 overflow-auto bg-[#090909] text-zinc-100">
-      <div className="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-12 sm:px-10">
-        <ProfileHeader
-          user={user}
-          form={form}
-          displayName={displayName}
-          editing={editing}
-          pickerOpen={pickerOpen}
-          saving={saving}
-          deletingAccount={deletingAccount}
-          canSave={canSave}
-          onFormChange={setForm}
-          onPickerOpenChange={setPickerOpen}
-          onStartEdit={() => setEditing(true)}
-          onCancelEdit={handleCancelEdit}
-          onSave={handleSave}
-          onLogout={() => setConfirmAction('logout')}
-          onDeleteAccount={() => setConfirmAction('delete')}
-        />
+    <div className="dollars-profile-shell h-full min-h-0 overflow-auto bg-black text-zinc-100">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-7 px-4 py-7 sm:px-8 lg:px-10">
+        <section className="dollars-profile-topline flex flex-col gap-7 border-b border-zinc-700/80 pb-7 lg:flex-row lg:items-center lg:justify-between">
+          <ProfileHeader
+            user={user}
+            form={form}
+            displayName={displayName}
+            editing={editing}
+            pickerOpen={pickerOpen}
+            saving={saving}
+            deletingAccount={deletingAccount}
+            canSave={canSave}
+            onFormChange={setForm}
+            onPickerOpenChange={setPickerOpen}
+            onStartEdit={() => setEditing(true)}
+            onCancelEdit={handleCancelEdit}
+            onSave={handleSave}
+            onLogout={() => setConfirmAction('logout')}
+            onDeleteAccount={() => setConfirmAction('delete')}
+          />
+          <ProfileStats stats={stats} />
+        </section>
 
-        <ProfileStats stats={stats} />
-        <OwnedRoomsSection rooms={ownedRooms} />
+        <section className="dollars-profile-content-grid grid gap-7 lg:grid-cols-[minmax(0,1fr)_390px]">
+          <div className="min-w-0">
+            <nav
+              className="dollars-profile-tabs grid grid-cols-3 border border-zinc-700 text-center text-xs font-semibold text-zinc-300 sm:grid-cols-6"
+              aria-label="个人资料菜单"
+            >
+              {['个人资料', '发布', '评论', '收藏', '喜欢', '设置'].map((item, index) => (
+                <button
+                  key={item}
+                  type="button"
+                  className={`h-10 border-zinc-700 transition hover:bg-zinc-900 hover:text-white ${
+                    index > 0 ? 'border-l' : ''
+                  } ${index === 0 ? 'bg-zinc-950 text-white' : ''}`}
+                >
+                  {item}
+                </button>
+              ))}
+            </nav>
+
+            <section className="mt-4 rounded-sm border border-zinc-700 bg-black/80 p-5">
+              <h2 className="text-sm font-semibold text-white">自我介绍</h2>
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-zinc-300">
+                {user?.bio?.trim() || '刚开始使用 DOLLARS。\n喜欢在安静的夜晚和大家慢慢聊天。'}
+              </p>
+            </section>
+
+            <OwnedRoomsSection rooms={ownedRooms} />
+          </div>
+
+          <aside className="flex min-w-0 flex-col gap-3">
+            <section className="rounded-sm border border-zinc-700 bg-black/80">
+              <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold">个人资料</h2>
+              <dl className="space-y-3 px-4 py-4 text-xs">
+                {profileRows.map(([label, value]) => (
+                  <div key={label} className="grid grid-cols-[96px_minmax(0,1fr)] gap-3">
+                    <dt className="text-zinc-500">{label}</dt>
+                    <dd className="truncate text-right text-zinc-200">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+
+            <section className="rounded-sm border border-zinc-700 bg-black/80">
+              <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold">徽章</h2>
+              <div className="grid grid-cols-4 gap-3 px-4 py-4 text-center text-[11px] text-zinc-400">
+                {['第2年', '发布达人', '评论常客', '...'].map((badge) => (
+                  <div key={badge} className="flex flex-col items-center gap-2">
+                    <span className="grid h-12 w-12 place-items-center rounded-full border border-zinc-500 text-base text-zinc-100">
+                      {badge === '...' ? '...' : '◇'}
+                    </span>
+                    <span className="truncate">{badge}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-sm border border-zinc-700 bg-black/80">
+              <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold">最近访客</h2>
+              <ul className="space-y-3 px-4 py-4 text-sm">
+                {visitors.map((visitor) => (
+                  <li key={visitor.name} className="grid grid-cols-[28px_minmax(0,1fr)_64px] items-center gap-3">
+                    <span className="h-6 w-6 rounded-full border border-zinc-600 bg-zinc-900" />
+                    <span className="truncate text-zinc-200">{visitor.name}</span>
+                    <span className="text-right text-xs text-zinc-500">{visitor.time}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </aside>
+        </section>
 
         {confirmDialog && (
           <ConfirmActionDialog

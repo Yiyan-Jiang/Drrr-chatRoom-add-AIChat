@@ -50,8 +50,8 @@ export function buildProfileStats(
     : null
 
   return [
-    { label: '创建房间', value: ownedRooms.length },
-    { label: '累计峰值', value: totalPeak },
+    { label: '发布', value: ownedRooms.length },
+    { label: '评论', value: totalPeak },
     { label: '加入天数', value: joinedDays ?? '-' },
   ]
 }
