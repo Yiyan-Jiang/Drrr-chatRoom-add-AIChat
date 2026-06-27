@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "lint:staged": "eslint --fix",
     "test:chat-room-lifecycle": "tsc --ignoreConfig --target ES2022 --module NodeNext --moduleResolution NodeNext --types node --outDir .tmp/tests tests/chat-room-lifecycle.test.ts && node --test .tmp/tests/chat-room-lifecycle.test.js",
     "test:ai-chat-ui": "tsc --ignoreConfig --target ES2022 --module NodeNext --moduleResolution NodeNext --types node --outDir .tmp/tests tests/ai-chat-ui.test.ts && node --test .tmp/tests/ai-chat-ui.test.js",
     "test:github-issues-api": "tsc --ignoreConfig --target ES2022 --module NodeNext --moduleResolution NodeNext --types node,vite/client --outDir .tmp/tests tests/github-issues-api.test.ts && node --test .tmp/tests/tests/github-issues-api.test.js",
