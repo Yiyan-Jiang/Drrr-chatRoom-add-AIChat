@@ -78,7 +78,6 @@ export default function ChatRoom() {
       <RoomInfoDrawer
         open={roomInfoOpen}
         room={chat.room}
-        members={chat.members}
         currentUserId={user?.id}
         deletingRoom={chat.deletingRoom}
         updatingRoom={chat.updatingRoom}
