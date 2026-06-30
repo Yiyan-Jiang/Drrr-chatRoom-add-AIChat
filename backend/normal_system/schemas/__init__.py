@@ -4,6 +4,15 @@ from normal_system.schemas.message import (
     MessageInDB,
     PaginatedMessagesResponse,
 )
+from normal_system.schemas.post import (
+    PaginatedCommentsResponse,
+    PaginatedPostsResponse,
+    PostCommentCreate,
+    PostCommentInDB,
+    PostCreate,
+    PostDetail,
+    PostListItem,
+)
 from normal_system.schemas.room import (
     RoomCreate,
     RoomInDB,
@@ -26,6 +35,13 @@ __all__ = [
     "MessageCreate",
     "MessageInDB",
     "PaginatedMessagesResponse",
+    "PaginatedCommentsResponse",
+    "PaginatedPostsResponse",
+    "PostCommentCreate",
+    "PostCommentInDB",
+    "PostCreate",
+    "PostDetail",
+    "PostListItem",
     "RoomCreate",
     "RoomInDB",
     "RoomOwner",

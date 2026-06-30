@@ -22,6 +22,8 @@ const NewsFeed = lazy(() => import('../pages/subPage/NewsFeed'))
 const NewsArticleDetail = lazy(() => import('../pages/subPage/NewsArticleDetail'))
 const MessageBoard = lazy(() => import('../pages/subPage/MessageBoard'))
 const MessageBoardIssueDetail = lazy(() => import('../pages/subPage/MessageBoardIssueDetail'))
+const PostsFeed = lazy(() => import('../pages/subPage/PostsFeed'))
+const PostDetail = lazy(() => import('../pages/subPage/PostDetail'))
 const ChatRoom = lazy(() => import('../pages/room/ChatRoom'))
 const AIChat = lazy(() => import('../pages/room/AIChat'))
 const NotFound = lazy(() => import('../pages/NotFound'))
@@ -88,6 +90,14 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: 'posts/:postId',
+            element: (
+              <RequireAuth>
+                <PostDetail />
+              </RequireAuth>
+            ),
+          },
+          {
             element: (
               <RequireAuth>
                 <MainLayout />
@@ -101,6 +111,7 @@ export const router = createBrowserRouter([
                   { index: true, element: <Navigate to="rooms" replace /> },
                   { path: 'news', element: <NewsFeed /> },
                   { path: 'board', element: <MessageBoard /> },
+                  { path: 'posts', element: <PostsFeed /> },
                   { path: 'rooms', element: <RoomSelect /> },
                 ],
               },
