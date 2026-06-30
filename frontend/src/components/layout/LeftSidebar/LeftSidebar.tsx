@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { path: '/home/news', label: '新闻流' },
   { path: '/home/rooms', label: '房间' },
   { path: '/home/board', label: '留言板' },
+  { path: '/home/posts', label: '帖子' },
 ]
 
 export default function LeftSidebar() {
