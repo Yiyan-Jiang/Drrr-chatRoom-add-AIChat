@@ -36,6 +36,11 @@ export interface PostComment {
   updated_at: string
 }
 
+export interface PostCommentListItem extends PostComment {
+  post_title: string
+  post_content_preview: string
+}
+
 export interface PaginatedPostsResponse {
   items: PostListItem[]
   has_more: boolean
@@ -44,6 +49,12 @@ export interface PaginatedPostsResponse {
 
 export interface PaginatedCommentsResponse {
   items: PostComment[]
+  has_more: boolean
+  next_cursor: number | null
+}
+
+export interface PaginatedMyCommentsResponse {
+  items: PostCommentListItem[]
   has_more: boolean
   next_cursor: number | null
 }
@@ -107,6 +118,30 @@ export const postsApi = {
     params?: { cursor?: number; limit?: number },
   ): Promise<PaginatedPostsResponse> => {
     const { data } = await apiClient.get<PaginatedPostsResponse>('/posts/favorites/mine', {
+      params,
+    })
+    return data
+  },
+  listMine: async (
+    params?: { cursor?: number; limit?: number },
+  ): Promise<PaginatedPostsResponse> => {
+    const { data } = await apiClient.get<PaginatedPostsResponse>('/posts/mine', {
+      params,
+    })
+    return data
+  },
+  listMyLikes: async (
+    params?: { cursor?: number; limit?: number },
+  ): Promise<PaginatedPostsResponse> => {
+    const { data } = await apiClient.get<PaginatedPostsResponse>('/posts/likes/mine', {
+      params,
+    })
+    return data
+  },
+  listMyComments: async (
+    params?: { cursor?: number; limit?: number },
+  ): Promise<PaginatedMyCommentsResponse> => {
+    const { data } = await apiClient.get<PaginatedMyCommentsResponse>('/posts/comments/mine', {
       params,
     })
     return data

@@ -15,6 +15,9 @@ from normal_system.repositories.post import (
     favorite_post,
     get_post_detail,
     list_my_favorite_posts,
+    list_my_liked_posts,
+    list_my_post_comments,
+    list_my_posts,
     list_posts,
     like_post,
     unfavorite_post,
@@ -149,6 +152,94 @@ def test_my_favorites_returns_current_user_favorited_posts():
         page = await list_my_favorite_posts(db_session, viewer.id, limit=10)
 
         assert [post.id for post in page.items] == [favorite.id]
+
+    asyncio.run(run_with_session(scenario))
+
+
+def test_my_posts_returns_current_user_published_posts():
+    async def scenario(db_session):
+        author = await create_user(db_session, "alice")
+        viewer = await create_user(db_session, "bob")
+        mine = await create_post(
+            db_session,
+            PostCreate(title="Mine", content="body"),
+            author_id=viewer.id,
+        )
+        await create_post(
+            db_session,
+            PostCreate(title="Not mine", content="body"),
+            author_id=author.id,
+        )
+
+        page = await list_my_posts(db_session, user_id=viewer.id, limit=10)
+
+        assert [post.id for post in page.items] == [mine.id]
+
+    asyncio.run(run_with_session(scenario))
+
+
+def test_my_likes_returns_current_user_liked_posts():
+    async def scenario(db_session):
+        author = await create_user(db_session, "alice")
+        viewer = await create_user(db_session, "bob")
+        liked = await create_post(
+            db_session,
+            PostCreate(title="Liked", content="body"),
+            author_id=author.id,
+        )
+        other = await create_post(
+            db_session,
+            PostCreate(title="Not liked", content="body"),
+            author_id=author.id,
+        )
+
+        await like_post(db_session, liked.id, viewer.id)
+        await like_post(db_session, other.id, author.id)
+
+        page = await list_my_liked_posts(db_session, user_id=viewer.id, limit=10)
+
+        assert [post.id for post in page.items] == [liked.id]
+
+    asyncio.run(run_with_session(scenario))
+
+
+def test_my_comments_returns_current_user_comments_with_post_summary():
+    async def scenario(db_session):
+        author = await create_user(db_session, "alice")
+        viewer = await create_user(db_session, "bob")
+        saved_post = await create_post(
+            db_session,
+            PostCreate(title="Commented post", content="body"),
+            author_id=author.id,
+        )
+        other_post = await create_post(
+            db_session,
+            PostCreate(title="Other post", content="body"),
+            author_id=author.id,
+        )
+
+        mine = await add_post_comment(
+            db_session,
+            saved_post.id,
+            PostCommentCreate(content="my comment"),
+            author_id=viewer.id,
+        )
+        await add_post_comment(
+            db_session,
+            other_post.id,
+            PostCommentCreate(content="someone else"),
+            author_id=author.id,
+        )
+
+        page = await list_my_post_comments(db_session, user_id=viewer.id, limit=10)
+
+        assert len(page.items) == 1
+        item = page.items[0]
+        assert item.id == mine.id
+        assert item.content == "my comment"
+        assert item.post_id == saved_post.id
+        assert item.post_title == "Commented post"
+        assert item.post_content_preview == "body"
 
     asyncio.run(run_with_session(scenario))
 

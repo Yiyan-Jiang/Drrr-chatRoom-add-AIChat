@@ -2,10 +2,12 @@
  * @parm 组件用途：装配我的页面的数据加载、用户操作和资料展示组件。
  */
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import { postsApi, type PostCommentListItem, type PostListItem } from '@/api'
 import { usersApi } from '@/api/users'
 import { roomApi } from '@/api/rooms'
+import PostCard from '@/components/posts/PostCard'
 import {
   buildConfirmDialog,
   buildProfileStats,
@@ -21,11 +23,36 @@ import { useAuth } from '@/contexts/AuthContext'
 import type { Room } from '@/types/chat'
 import { logger } from '@/utils/logger'
 
+type ProfileTab = 'profile' | 'posts' | 'comments' | 'favorites' | 'likes' | 'settings'
+
+const profileTabs: Array<{ key: ProfileTab; label: string }> = [
+  { key: 'profile', label: '个人资料' },
+  { key: 'posts', label: '发布' },
+  { key: 'comments', label: '评论' },
+  { key: 'favorites', label: '收藏' },
+  { key: 'likes', label: '喜欢' },
+  { key: 'settings', label: '设置' },
+]
+
+function formatPostDate(value: string): string {
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
+}
+
 export default function MyPage() {
   const { user, updateUser, logout } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState<ProfileForm>(() => toProfileForm(user))
   const [ownedRooms, setOwnedRooms] = useState<Room[]>([])
+  const [myPosts, setMyPosts] = useState<PostListItem[]>([])
+  const [favoritePosts, setFavoritePosts] = useState<PostListItem[]>([])
+  const [likedPosts, setLikedPosts] = useState<PostListItem[]>([])
+  const [postComments, setPostComments] = useState<PostCommentListItem[]>([])
+  const [activeTab, setActiveTab] = useState<ProfileTab>('profile')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
@@ -38,13 +65,21 @@ export default function MyPage() {
 
     async function loadProfile() {
       try {
-        const [currentUser, rooms] = await Promise.all([
+        const [currentUser, rooms, posts, favorites, comments, likes] = await Promise.all([
           usersApi.getMe(),
           roomApi.listMine(),
+          postsApi.listMine({ limit: 20 }),
+          postsApi.listMyFavorites({ limit: 20 }),
+          postsApi.listMyComments({ limit: 20 }),
+          postsApi.listMyLikes({ limit: 20 }),
         ])
         if (cancelled) return
         updateUser(currentUser)
         setOwnedRooms(rooms)
+        setMyPosts(posts.items)
+        setFavoritePosts(favorites.items)
+        setLikedPosts(likes.items)
+        setPostComments(comments.items)
         setForm(toProfileForm(currentUser))
       } catch (error) {
         logger.error('[profile] failed to load current user', {
@@ -220,27 +255,110 @@ export default function MyPage() {
               className="dollars-profile-tabs grid grid-cols-3 border border-zinc-700 text-center text-xs font-semibold text-zinc-300 sm:grid-cols-6"
               aria-label="个人资料菜单"
             >
-              {['个人资料', '发布', '评论', '收藏', '喜欢', '设置'].map((item, index) => (
+              {profileTabs.map((tab, index) => (
                 <button
-                  key={item}
+                  key={tab.key}
                   type="button"
+                  onClick={() => setActiveTab(tab.key)}
                   className={`h-10 border-zinc-700 transition hover:bg-zinc-900 hover:text-white ${
                     index > 0 ? 'border-l' : ''
-                  } ${index === 0 ? 'bg-zinc-950 text-white' : ''}`}
+                  } ${activeTab === tab.key ? 'bg-zinc-950 text-white' : ''}`}
                 >
-                  {item}
+                  {tab.label}
                 </button>
               ))}
             </nav>
 
-            <section className="mt-4 rounded-sm border border-zinc-700 bg-black/80 p-5">
+            <section className={`${activeTab === 'profile' ? 'mt-4' : 'hidden'} rounded-sm border border-zinc-700 bg-black/80 p-5`}>
               <h2 className="text-sm font-semibold text-white">自我介绍</h2>
               <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-zinc-300">
                 {user?.bio?.trim() || '刚开始使用 DOLLARS。\n喜欢在安静的夜晚和大家慢慢聊天。'}
               </p>
             </section>
 
-            <OwnedRoomsSection rooms={ownedRooms} />
+            {activeTab === 'profile' && <OwnedRoomsSection rooms={ownedRooms} />}
+
+            {activeTab === 'comments' && (
+              <section className="mt-4 rounded-sm border border-zinc-700 bg-black/80">
+                <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold text-white">我的评论</h2>
+                {postComments.length === 0 ? (
+                  <p className="px-4 py-8 text-center text-sm text-zinc-500">还没有发表过帖子评论。</p>
+                ) : (
+                  <ul className="divide-y divide-zinc-800">
+                    {postComments.map((comment) => (
+                      <li key={comment.id} className="px-4 py-4">
+                        <Link className="block transition hover:text-white" to={`/posts/${comment.post_id}`}>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                            <span>评论于</span>
+                            <span className="max-w-full truncate text-zinc-300">{comment.post_title}</span>
+                            <span>{formatPostDate(comment.updated_at)}</span>
+                          </div>
+                          <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm leading-6 text-zinc-200">
+                            {comment.content}
+                          </p>
+                          {comment.post_content_preview && (
+                            <p className="mt-2 line-clamp-2 border-l border-zinc-700 pl-3 text-xs leading-5 text-zinc-500">
+                              {comment.post_content_preview}
+                            </p>
+                          )}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            )}
+
+            {activeTab === 'favorites' && (
+              <section className="mt-4 flex flex-col gap-3">
+                <h2 className="text-sm font-semibold text-white">我的收藏</h2>
+                {favoritePosts.length === 0 ? (
+                  <div className="rounded-sm border border-zinc-700 bg-black/80 px-4 py-8 text-center text-sm text-zinc-500">
+                    还没有收藏帖子。
+                  </div>
+                ) : (
+                  favoritePosts.map((post) => (
+                    <PostCard key={post.id} post={post} />
+                  ))
+                )}
+              </section>
+            )}
+
+            {activeTab === 'posts' && (
+              <section className="mt-4 flex flex-col gap-3">
+                <h2 className="text-sm font-semibold text-white">我发布的帖子</h2>
+                {myPosts.length === 0 ? (
+                  <div className="rounded-sm border border-zinc-700 bg-black/80 px-4 py-8 text-center text-sm text-zinc-500">
+                    还没有发布帖子。
+                  </div>
+                ) : (
+                  myPosts.map((post) => (
+                    <PostCard key={post.id} post={post} />
+                  ))
+                )}
+              </section>
+            )}
+
+            {activeTab === 'likes' && (
+              <section className="mt-4 flex flex-col gap-3">
+                <h2 className="text-sm font-semibold text-white">我喜欢的帖子</h2>
+                {likedPosts.length === 0 ? (
+                  <div className="rounded-sm border border-zinc-700 bg-black/80 px-4 py-8 text-center text-sm text-zinc-500">
+                    还没有喜欢的帖子。
+                  </div>
+                ) : (
+                  likedPosts.map((post) => (
+                    <PostCard key={post.id} post={post} />
+                  ))
+                )}
+              </section>
+            )}
+
+            {activeTab === 'settings' && (
+              <section className="mt-4 rounded-sm border border-zinc-700 bg-black/80 px-4 py-8 text-center text-sm text-zinc-500">
+                暂无内容。
+              </section>
+            )}
           </div>
 
           <aside className="flex min-w-0 flex-col gap-3">
