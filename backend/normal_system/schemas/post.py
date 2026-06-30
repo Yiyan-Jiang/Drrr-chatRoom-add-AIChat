@@ -36,6 +36,11 @@ class PostCommentInDB(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PostCommentListItem(PostCommentInDB):
+    post_title: str
+    post_content_preview: str
+
+
 class PostListItem(BaseModel):
     id: int
     title: str
@@ -62,5 +67,11 @@ class PaginatedPostsResponse(BaseModel):
 
 class PaginatedCommentsResponse(BaseModel):
     items: list[PostCommentInDB]
+    has_more: bool = False
+    next_cursor: Optional[int] = None
+
+
+class PaginatedMyCommentsResponse(BaseModel):
+    items: list[PostCommentListItem]
     has_more: bool = False
     next_cursor: Optional[int] = None

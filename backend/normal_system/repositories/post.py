@@ -8,9 +8,11 @@ from normal_system.models import User
 from normal_system.models.post import Post, PostComment, PostFavorite, PostLike
 from normal_system.schemas.post import (
     PaginatedCommentsResponse,
+    PaginatedMyCommentsResponse,
     PaginatedPostsResponse,
     PostCommentCreate,
     PostCommentInDB,
+    PostCommentListItem,
     PostCreate,
     PostDetail,
     PostListItem,
@@ -299,6 +301,107 @@ async def list_my_favorite_posts(
         for post, author in page_rows
     ]
     return PaginatedPostsResponse(
+        items=items,
+        has_more=len(rows) > safe_limit,
+        next_cursor=items[-1].id if len(rows) > safe_limit and items else None,
+    )
+
+
+async def list_my_posts(
+    db: AsyncSession,
+    user_id: int,
+    limit: int = 20,
+    cursor: int | None = None,
+) -> PaginatedPostsResponse:
+    safe_limit = max(1, min(limit, 50))
+    filters = [Post.author_id == user_id, Post.status == "published"]
+    if cursor is not None:
+        filters.append(Post.id < cursor)
+    result = await db.execute(
+        select(Post, User)
+        .outerjoin(User, Post.author_id == User.id)
+        .where(*filters)
+        .order_by(Post.id.desc())
+        .limit(safe_limit + 1)
+    )
+    rows = result.all()
+    page_rows = rows[:safe_limit]
+    items = [
+        await _to_list_item(db, post, author, user_id)
+        for post, author in page_rows
+    ]
+    return PaginatedPostsResponse(
+        items=items,
+        has_more=len(rows) > safe_limit,
+        next_cursor=items[-1].id if len(rows) > safe_limit and items else None,
+    )
+
+
+async def list_my_liked_posts(
+    db: AsyncSession,
+    user_id: int,
+    limit: int = 20,
+    cursor: int | None = None,
+) -> PaginatedPostsResponse:
+    safe_limit = max(1, min(limit, 50))
+    filters = [PostLike.user_id == user_id, Post.status == "published"]
+    if cursor is not None:
+        filters.append(Post.id < cursor)
+    result = await db.execute(
+        select(Post, User)
+        .join(PostLike, PostLike.post_id == Post.id)
+        .outerjoin(User, Post.author_id == User.id)
+        .where(*filters)
+        .order_by(PostLike.created_at.desc(), Post.id.desc())
+        .limit(safe_limit + 1)
+    )
+    rows = result.all()
+    page_rows = rows[:safe_limit]
+    items = [
+        await _to_list_item(db, post, author, user_id)
+        for post, author in page_rows
+    ]
+    return PaginatedPostsResponse(
+        items=items,
+        has_more=len(rows) > safe_limit,
+        next_cursor=items[-1].id if len(rows) > safe_limit and items else None,
+    )
+
+
+async def list_my_post_comments(
+    db: AsyncSession,
+    user_id: int,
+    limit: int = 20,
+    cursor: int | None = None,
+) -> PaginatedMyCommentsResponse:
+    safe_limit = max(1, min(limit, 50))
+    filters = [PostComment.author_id == user_id, Post.status == "published"]
+    if cursor is not None:
+        filters.append(PostComment.id < cursor)
+    result = await db.execute(
+        select(PostComment, Post, User)
+        .join(Post, PostComment.post_id == Post.id)
+        .outerjoin(User, PostComment.author_id == User.id)
+        .where(*filters)
+        .order_by(PostComment.id.desc())
+        .limit(safe_limit + 1)
+    )
+    rows = result.all()
+    page_rows = rows[:safe_limit]
+    items = [
+        PostCommentListItem(
+            id=comment.id,
+            post_id=comment.post_id,
+            content=comment.content,
+            author=_author_public(author),
+            created_at=comment.created_at,
+            updated_at=comment.updated_at,
+            post_title=post.title,
+            post_content_preview=_preview(post.content),
+        )
+        for comment, post, author in page_rows
+    ]
+    return PaginatedMyCommentsResponse(
         items=items,
         has_more=len(rows) > safe_limit,
         next_cursor=items[-1].id if len(rows) > safe_limit and items else None,

@@ -6,9 +6,11 @@ from normal_system.schemas.message import (
 )
 from normal_system.schemas.post import (
     PaginatedCommentsResponse,
+    PaginatedMyCommentsResponse,
     PaginatedPostsResponse,
     PostCommentCreate,
     PostCommentInDB,
+    PostCommentListItem,
     PostCreate,
     PostDetail,
     PostListItem,
@@ -36,9 +38,11 @@ __all__ = [
     "MessageInDB",
     "PaginatedMessagesResponse",
     "PaginatedCommentsResponse",
+    "PaginatedMyCommentsResponse",
     "PaginatedPostsResponse",
     "PostCommentCreate",
     "PostCommentInDB",
+    "PostCommentListItem",
     "PostCreate",
     "PostDetail",
     "PostListItem",

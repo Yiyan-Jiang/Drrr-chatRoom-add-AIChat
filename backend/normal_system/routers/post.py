@@ -11,6 +11,9 @@ from normal_system.repositories.post import (
     favorite_post,
     get_post_detail,
     list_my_favorite_posts,
+    list_my_liked_posts,
+    list_my_post_comments,
+    list_my_posts,
     list_post_comments,
     list_posts,
     like_post,
@@ -19,6 +22,7 @@ from normal_system.repositories.post import (
 )
 from normal_system.schemas import (
     PaginatedCommentsResponse,
+    PaginatedMyCommentsResponse,
     PaginatedPostsResponse,
     PostCommentCreate,
     PostCommentInDB,
@@ -65,6 +69,36 @@ async def list_my_favorite_posts_endpoint(
     cursor: int | None = Query(default=None, ge=1),
 ):
     return await list_my_favorite_posts(db, user_id=user_id, limit=limit, cursor=cursor)
+
+
+@router.get("/mine", response_model=PaginatedPostsResponse)
+async def list_my_posts_endpoint(
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+    limit: int = Query(20, ge=1, le=50),
+    cursor: int | None = Query(default=None, ge=1),
+):
+    return await list_my_posts(db, user_id=user_id, limit=limit, cursor=cursor)
+
+
+@router.get("/likes/mine", response_model=PaginatedPostsResponse)
+async def list_my_liked_posts_endpoint(
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+    limit: int = Query(20, ge=1, le=50),
+    cursor: int | None = Query(default=None, ge=1),
+):
+    return await list_my_liked_posts(db, user_id=user_id, limit=limit, cursor=cursor)
+
+
+@router.get("/comments/mine", response_model=PaginatedMyCommentsResponse)
+async def list_my_post_comments_endpoint(
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+    limit: int = Query(20, ge=1, le=50),
+    cursor: int | None = Query(default=None, ge=1),
+):
+    return await list_my_post_comments(db, user_id=user_id, limit=limit, cursor=cursor)
 
 
 @router.get("/{post_id:int}", response_model=PostDetail)
