@@ -1,5 +1,6 @@
 import type { PostComment } from '@/api'
-import PostAuthorAvatar, { getPostAuthorName } from '@/components/posts/PostAuthorAvatar'
+import PostAuthorAvatar from '@/components/posts/PostAuthorAvatar'
+import { getPostAuthorName } from '@/components/posts/postAuthorName'
 import { MarkdownRenderer } from '@/features/news/markdownRenderer'
 
 type CommentListProps = {

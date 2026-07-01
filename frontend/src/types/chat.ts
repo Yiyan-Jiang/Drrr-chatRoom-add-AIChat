@@ -54,6 +54,8 @@ export interface Message {
   content: string;
   user_id: number | null;
   room_id: number;
+  sender_id?: number;
+  recipient_id?: number;
   message_type?: 'user' | 'system';
   client_message_id?: string | null;
   author?: User | null;
@@ -121,6 +123,50 @@ export interface CreateMessageRequest {
   content: string;
   room_id: number;
   client_message_id?: string | null;
+}
+
+export type FriendRequestStatus = 'pending' | 'accepted' | 'rejected' | 'canceled';
+export type FriendRequestDirection = 'incoming' | 'outgoing' | 'all';
+
+export interface Friend {
+  user: User;
+  created_at: string;
+}
+
+export interface PaginatedFriendsResponse {
+  items: Friend[];
+  total: number;
+  page: number;
+  page_size: number;
+  has_more: boolean;
+}
+
+export interface FriendRequest {
+  id: number;
+  requester: User;
+  recipient: User;
+  status: FriendRequestStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaginatedFriendRequestsResponse {
+  items: FriendRequest[];
+}
+
+export interface CreateFriendRequest {
+  recipient_id: number;
+}
+
+export interface PrivateMessage extends Message {
+  sender_id: number;
+  recipient_id: number;
+}
+
+export interface PaginatedPrivateMessagesResponse {
+  items: PrivateMessage[];
+  has_more: boolean;
+  next_before_id: number | null;
 }
 
 

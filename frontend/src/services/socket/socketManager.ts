@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client'
-import type { Message, RoomDeletedEvent, RoomMembersEvent } from '@/types/chat'
+import type { Message, PrivateMessage, RoomDeletedEvent, RoomMembersEvent } from '@/types/chat'
 import { logger } from '@/utils/logger'
 
 const SOCKET_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -97,6 +97,23 @@ export const socketManager = {
     socketInstance?.emit('send_message', { room_id: roomId, content, client_message_id: clientMessageId })
   },
 
+  joinPrivateChat: (friendId: number) => {
+    socketInstance?.emit('join_private_chat', { friend_id: friendId })
+  },
+
+  leavePrivateChat: (friendId: number) => {
+    socketInstance?.emit('leave_private_chat', { friend_id: friendId })
+  },
+
+  sendPrivateMessage: (recipientId: number, content: string, clientMessageId?: string) => {
+    if (!content.trim()) return
+    socketInstance?.emit('send_private_message', {
+      recipient_id: recipientId,
+      content,
+      client_message_id: clientMessageId,
+    })
+  },
+
   // 服务端 -> 客户端事件监听
 
   
@@ -125,6 +142,38 @@ export const socketManager = {
 
   offMessageAck: (callback: (message: Message) => void) => {
     socketInstance?.off('message_ack', callback)
+  },
+
+  onPrivatePreviousMessages: (callback: (messages: PrivateMessage[]) => void) => {
+    socketInstance?.on('private_previous_messages', callback)
+  },
+
+  offPrivatePreviousMessages: (callback: (messages: PrivateMessage[]) => void) => {
+    socketInstance?.off('private_previous_messages', callback)
+  },
+
+  onPrivateMessageAck: (callback: (message: PrivateMessage) => void) => {
+    socketInstance?.on('private_message_ack', callback)
+  },
+
+  offPrivateMessageAck: (callback: (message: PrivateMessage) => void) => {
+    socketInstance?.off('private_message_ack', callback)
+  },
+
+  onPrivateNewMessage: (callback: (message: PrivateMessage) => void) => {
+    socketInstance?.on('private_new_message', callback)
+  },
+
+  offPrivateNewMessage: (callback: (message: PrivateMessage) => void) => {
+    socketInstance?.off('private_new_message', callback)
+  },
+
+  onPrivateChatError: (callback: (data: { message: string }) => void) => {
+    socketInstance?.on('private_chat_error', callback)
+  },
+
+  offPrivateChatError: (callback: (data: { message: string }) => void) => {
+    socketInstance?.off('private_chat_error', callback)
   },
 
   onRoomDeleted: (callback: (data: RoomDeletedEvent) => void) => {

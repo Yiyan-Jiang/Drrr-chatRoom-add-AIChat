@@ -26,6 +26,7 @@ const PostsFeed = lazy(() => import('../pages/subPage/PostsFeed'))
 const PostDetail = lazy(() => import('../pages/subPage/PostDetail'))
 const ChatRoom = lazy(() => import('../pages/room/ChatRoom'))
 const AIChat = lazy(() => import('../pages/room/AIChat'))
+const PrivateChat = lazy(() => import('../pages/room/PrivateChat'))
 const NotFound = lazy(() => import('../pages/NotFound'))
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
@@ -70,6 +71,14 @@ export const router = createBrowserRouter([
             element: (
               <RequireAuth>
                 <AIChat />
+              </RequireAuth>
+            ),
+          },
+          {
+            path: 'private-chat/:friendId',
+            element: (
+              <RequireAuth>
+                <PrivateChat />
               </RequireAuth>
             ),
           },
