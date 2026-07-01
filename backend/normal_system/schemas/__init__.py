@@ -1,4 +1,14 @@
 from normal_system.schemas.auth import LoginRequest, LoginResponse
+from normal_system.schemas.friend import (
+    FriendInDB,
+    FriendRequestCreate,
+    FriendRequestInDB,
+    PaginatedFriendRequestsResponse,
+    PaginatedFriendsResponse,
+    PaginatedPrivateMessagesResponse,
+    PrivateMessageCreate,
+    PrivateMessageInDB,
+)
 from normal_system.schemas.message import (
     MessageCreate,
     MessageInDB,
@@ -34,9 +44,15 @@ from normal_system.schemas.user import (
 __all__ = [
     "LoginRequest",
     "LoginResponse",
+    "FriendInDB",
+    "FriendRequestCreate",
+    "FriendRequestInDB",
     "MessageCreate",
     "MessageInDB",
+    "PaginatedFriendRequestsResponse",
+    "PaginatedFriendsResponse",
     "PaginatedMessagesResponse",
+    "PaginatedPrivateMessagesResponse",
     "PaginatedCommentsResponse",
     "PaginatedMyCommentsResponse",
     "PaginatedPostsResponse",
@@ -46,6 +62,8 @@ __all__ = [
     "PostCreate",
     "PostDetail",
     "PostListItem",
+    "PrivateMessageCreate",
+    "PrivateMessageInDB",
     "RoomCreate",
     "RoomInDB",
     "RoomOwner",

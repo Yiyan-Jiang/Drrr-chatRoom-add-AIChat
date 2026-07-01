@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { postsApi, type PostCommentListItem, type PostListItem } from '@/api'
+import { friendsApi } from '@/api/friends'
 import { usersApi } from '@/api/users'
 import { roomApi } from '@/api/rooms'
 import PostCard from '@/components/posts/PostCard'
@@ -20,7 +21,7 @@ import {
   type ProfileForm,
 } from '@/components/profile'
 import { useAuth } from '@/contexts/AuthContext'
-import type { Room } from '@/types/chat'
+import type { FriendRequest, Room } from '@/types/chat'
 import { logger } from '@/utils/logger'
 
 type ProfileTab = 'profile' | 'posts' | 'comments' | 'favorites' | 'likes' | 'settings'
@@ -43,6 +44,10 @@ function formatPostDate(value: string): string {
   }).format(new Date(value))
 }
 
+function filterPendingFriendRequests(requests: FriendRequest[]) {
+  return requests.filter((request) => request.status === 'pending')
+}
+
 export default function MyPage() {
   const { user, updateUser, logout } = useAuth()
   const navigate = useNavigate()
@@ -52,6 +57,8 @@ export default function MyPage() {
   const [favoritePosts, setFavoritePosts] = useState<PostListItem[]>([])
   const [likedPosts, setLikedPosts] = useState<PostListItem[]>([])
   const [postComments, setPostComments] = useState<PostCommentListItem[]>([])
+  const [incomingFriendRequests, setIncomingFriendRequests] = useState<FriendRequest[]>([])
+  const [outgoingFriendRequests, setOutgoingFriendRequests] = useState<FriendRequest[]>([])
   const [activeTab, setActiveTab] = useState<ProfileTab>('profile')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -65,13 +72,15 @@ export default function MyPage() {
 
     async function loadProfile() {
       try {
-        const [currentUser, rooms, posts, favorites, comments, likes] = await Promise.all([
+        const [currentUser, rooms, posts, favorites, comments, likes, incomingRequests, outgoingRequests] = await Promise.all([
           usersApi.getMe(),
           roomApi.listMine(),
           postsApi.listMine({ limit: 20 }),
           postsApi.listMyFavorites({ limit: 20 }),
           postsApi.listMyComments({ limit: 20 }),
           postsApi.listMyLikes({ limit: 20 }),
+          friendsApi.listRequests('incoming'),
+          friendsApi.listRequests('outgoing'),
         ])
         if (cancelled) return
         updateUser(currentUser)
@@ -80,6 +89,8 @@ export default function MyPage() {
         setFavoritePosts(favorites.items)
         setLikedPosts(likes.items)
         setPostComments(comments.items)
+        setIncomingFriendRequests(filterPendingFriendRequests(incomingRequests.items))
+        setOutgoingFriendRequests(filterPendingFriendRequests(outgoingRequests.items))
         setForm(toProfileForm(currentUser))
       } catch (error) {
         logger.error('[profile] failed to load current user', {
@@ -198,6 +209,33 @@ export default function MyPage() {
     if (confirmAction === 'delete') {
       await handleDeleteAccount()
     }
+  }
+
+  const reloadFriendRequests = async () => {
+    const [incomingRequests, outgoingRequests] = await Promise.all([
+      friendsApi.listRequests('incoming'),
+      friendsApi.listRequests('outgoing'),
+    ])
+    setIncomingFriendRequests(filterPendingFriendRequests(incomingRequests.items))
+    setOutgoingFriendRequests(filterPendingFriendRequests(outgoingRequests.items))
+  }
+
+  const handleAcceptFriendRequest = async (requestId: number) => {
+    await friendsApi.acceptRequest(requestId)
+    await reloadFriendRequests()
+    toast.success('已接受好友申请')
+  }
+
+  const handleRejectFriendRequest = async (requestId: number) => {
+    await friendsApi.rejectRequest(requestId)
+    await reloadFriendRequests()
+    toast.success('已拒绝好友申请')
+  }
+
+  const handleCancelFriendRequest = async (requestId: number) => {
+    await friendsApi.cancelRequest(requestId)
+    await reloadFriendRequests()
+    toast.success('已取消好友申请')
   }
 
   if (loading && !user) {
@@ -355,8 +393,49 @@ export default function MyPage() {
             )}
 
             {activeTab === 'settings' && (
-              <section className="mt-4 rounded-sm border border-zinc-700 bg-black/80 px-4 py-8 text-center text-sm text-zinc-500">
-                暂无内容。
+              <section className="mt-4 rounded-sm border border-zinc-700 bg-black/80">
+                <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold text-white">好友申请</h2>
+                <div className="grid gap-4 p-4 lg:grid-cols-2">
+                  <div>
+                    <h3 className="text-xs font-semibold text-zinc-400">收到的申请</h3>
+                    {incomingFriendRequests.length === 0 ? (
+                      <p className="py-5 text-sm text-zinc-500">暂无收到的好友申请。</p>
+                    ) : (
+                      <ul className="mt-3 space-y-3">
+                        {incomingFriendRequests.map((request) => (
+                          <li key={request.id} className="flex items-center justify-between gap-3 border border-zinc-800 px-3 py-2">
+                            <span className="truncate text-sm text-zinc-200">{request.requester.nickname || request.requester.username}</span>
+                            <div className="flex gap-2">
+                              <button className="border border-zinc-700 px-2 py-1 text-xs" type="button" onClick={() => void handleAcceptFriendRequest(request.id)}>
+                                接受
+                              </button>
+                              <button className="border border-zinc-700 px-2 py-1 text-xs" type="button" onClick={() => void handleRejectFriendRequest(request.id)}>
+                                拒绝
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-semibold text-zinc-400">发出的申请</h3>
+                    {outgoingFriendRequests.length === 0 ? (
+                      <p className="py-5 text-sm text-zinc-500">暂无发出的好友申请。</p>
+                    ) : (
+                      <ul className="mt-3 space-y-3">
+                        {outgoingFriendRequests.map((request) => (
+                          <li key={request.id} className="flex items-center justify-between gap-3 border border-zinc-800 px-3 py-2">
+                            <span className="truncate text-sm text-zinc-200">{request.recipient.nickname || request.recipient.username}</span>
+                            <button className="border border-zinc-700 px-2 py-1 text-xs" type="button" onClick={() => void handleCancelFriendRequest(request.id)}>
+                              取消
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
               </section>
             )}
           </div>

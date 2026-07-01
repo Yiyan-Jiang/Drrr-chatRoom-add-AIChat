@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { PostListItem } from '@/api'
-import PostAuthorAvatar, { getPostAuthorName } from '@/components/posts/PostAuthorAvatar'
+import PostAuthorAvatar from '@/components/posts/PostAuthorAvatar'
+import { getPostAuthorName } from '@/components/posts/postAuthorName'
 import { CommentIcon, FavoriteIcon, LikeIcon } from '@/components/posts/PostStatsIcons'
 import { MarkdownRenderer } from '@/features/news/markdownRenderer'
 
