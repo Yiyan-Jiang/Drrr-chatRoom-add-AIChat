@@ -1,6 +1,7 @@
 from fastapi import Header, HTTPException, Request, status
 
 from common.auth import decode_access_token
+from common.gate_cookie import is_gate_cookie_valid
 
 
 async def get_current_user_id(
@@ -21,5 +22,5 @@ async def get_current_user_id(
 
 async def require_gate_passed(request: Request) -> None:
     gate_passed = request.cookies.get("gate_passed")
-    if gate_passed != "true":
+    if not is_gate_cookie_valid(gate_passed):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Gate verification required")

@@ -2,6 +2,12 @@ import os
 
 from fastapi import APIRouter, Form, HTTPException, Request, Response, status
 
+from common.gate_cookie import (
+    GATE_COOKIE_MAX_AGE_SECONDS,
+    create_gate_cookie_value,
+    is_gate_cookie_valid,
+)
+
 router = APIRouter(prefix="/gate", tags=["gate"])
 
 # 获取本地环境变量密码
@@ -20,9 +26,9 @@ async def verify_gate(response: Response, password: str = Form(...)):
     if password == get_gate_password():
         response.set_cookie(
             key="gate_passed",
-            value="true",
+            value=create_gate_cookie_value(),
             httponly=True,
-            max_age=60 * 60 * 24 * 7,
+            max_age=GATE_COOKIE_MAX_AGE_SECONDS,
             samesite="lax",
             path="/",
             secure=False,
@@ -34,6 +40,6 @@ async def verify_gate(response: Response, password: str = Form(...)):
 @router.get("/status")
 async def gate_status(request: Request):
     gate_passed = request.cookies.get("gate_passed")
-    if gate_passed != "true":
+    if not is_gate_cookie_valid(gate_passed):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未通过门卫验证")
     return {"verified": True}
