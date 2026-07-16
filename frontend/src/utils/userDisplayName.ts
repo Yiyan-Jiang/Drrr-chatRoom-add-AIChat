@@ -1,4 +1,4 @@
-import type { User } from '@/types/chat'
+import type { User } from '@/types/user'
 
 type DisplayUser = Pick<User, 'id' | 'username' | 'nickname'> | null | undefined
 

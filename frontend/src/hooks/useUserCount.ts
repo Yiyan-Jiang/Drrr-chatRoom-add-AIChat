@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Usercnt } from '../types/chat' 
+import type { Usercnt } from '../types/user'
 import { usersApi } from "../api/users";
 import { logger } from '../utils/logger';
 

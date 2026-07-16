@@ -3,7 +3,7 @@
  */
 import { useEffect, useState } from 'react'
 import { chatAvatarCatalog, resolveChatAvatarAssets } from '@/assets/chatAvatarCatalog'
-import type { User } from '@/types/chat'
+import type { User } from '@/types/user'
 import type { ProfileForm } from './profilePageModel'
 
 type ProfileHeaderProps = {

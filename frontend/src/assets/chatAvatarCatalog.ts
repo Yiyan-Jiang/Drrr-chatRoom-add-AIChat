@@ -14,7 +14,7 @@ import zaikaAvatar from './icon/avater/zaika/icon_zaika.png'
 import zaikaBubble from './icon/avater/zaika/zaika.png'
 import zawaAvatar from './icon/avater/zawa/icon_zawa.png'
 import zawaBubble from './icon/avater/zawa/green.png'
-import type { AvatarKey } from '@/types/chat'
+import type { AvatarKey } from '@/types/user'
 
 type ChatAvatarAssets = {
   avatar: string

@@ -1,16 +1,6 @@
 import { apiClient } from "./client";
-import type { User, Usercnt } from '../types/chat'
-
-export interface UserUpdate {
-  nickname: string;
-  bio: string;
-  avatar_key?: string;
-}
-
-export interface RegisterRequest {
-  username: string;
-  password: string;
-}
+import type { RegisterRequest } from '../types/auth'
+import type { User, Usercnt, UserUpdate } from '../types/user'
 
 export const usersApi = {
 

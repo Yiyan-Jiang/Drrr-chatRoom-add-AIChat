@@ -1,5 +1,6 @@
 import { io, Socket } from 'socket.io-client'
-import type { Message, PrivateMessage, RoomDeletedEvent, RoomMembersEvent } from '@/types/chat'
+import type { Message, RoomDeletedEvent, RoomMembersEvent } from '@/types/chat'
+import type { PrivateMessage } from '@/types/privateMessages'
 import { logger } from '@/utils/logger'
 
 const SOCKET_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';

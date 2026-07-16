@@ -1,4 +1,5 @@
-import type { Room, User } from '../../types/chat.js'
+import type { Room } from '../../types/chat.js'
+import type { User } from '../../types/user.js'
 
 export type ProfileForm = {
   nickname: string

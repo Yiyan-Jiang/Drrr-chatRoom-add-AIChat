@@ -2,7 +2,7 @@
  * @parm 组件用途：展示注册表单并把输入和提交事件交给上层。
  */
 import AuthTextInput from '@/components/auth/AuthTextInput'
-import type { RegisterRequest } from '@/types/chat'
+import type { RegisterRequest } from '@/types/auth'
 import type { ChangeEvent, FormEvent } from 'react'
 
 interface RegisterFormProps {

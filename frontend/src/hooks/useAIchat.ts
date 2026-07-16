@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import type { AICharacter } from '../types/chat'
+import type { AICharacter } from '../types/ai'
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
 const HISTORY_PAGE_SIZE = 30
