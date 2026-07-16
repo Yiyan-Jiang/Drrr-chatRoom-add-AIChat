@@ -2,7 +2,7 @@
  * @parm 组件用途：展示登录表单并把输入和提交事件交给上层。
  */
 import AuthTextInput from '@/components/auth/AuthTextInput'
-import type { LoginCredentials } from '@/types/chat'
+import type { LoginCredentials } from '@/types/auth'
 import type { ChangeEvent, FormEvent } from 'react'
 
 interface LoginFormProps {

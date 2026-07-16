@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { friendsApi } from '@/api/friends'
 import { resolveChatAvatarAssets } from '@/assets/chatAvatarCatalog'
-import type { Friend, FriendRequest } from '@/types/chat'
+import type { Friend, FriendRequest } from '@/types/friends'
 import { getUserDisplayName } from '@/utils/userDisplayName'
 import { logger } from '@/utils/logger'
 

@@ -21,7 +21,8 @@ import {
   type ProfileForm,
 } from '@/components/profile'
 import { useAuth } from '@/contexts/AuthContext'
-import type { FriendRequest, Room } from '@/types/chat'
+import type { Room } from '@/types/chat'
+import type { FriendRequest } from '@/types/friends'
 import { logger } from '@/utils/logger'
 
 type ProfileTab = 'profile' | 'posts' | 'comments' | 'favorites' | 'likes' | 'settings'

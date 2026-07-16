@@ -1,7 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import type { User, LoginResponse } from '../types/chat';
+import type { LoginResponse } from '../types/auth';
+import type { User } from '../types/user';
 import { socketManager } from '@/services/socket';
 
 interface AuthContextType {

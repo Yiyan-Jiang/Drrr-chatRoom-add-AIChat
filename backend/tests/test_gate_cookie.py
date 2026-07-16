@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
+import jwt
 
 
 GATE_COOKIE_SECRET = "gate-cookie-secret-with-at-least-32-bytes"
@@ -42,6 +43,35 @@ class GateCookieTest(unittest.TestCase):
         self.assertNotIn("gate_passed=true", cookie_header)
         self.assertEqual(status_response.status_code, 200)
         self.assertEqual(status_response.json(), {"verified": True})
+
+    def test_gate_cookie_is_standard_jwt(self):
+        with gate_test_environment():
+            from common.gate_cookie import create_gate_cookie_value
+
+            cookie_value = create_gate_cookie_value(secret=GATE_COOKIE_SECRET)
+
+        header = jwt.get_unverified_header(cookie_value)
+        payload = jwt.decode(cookie_value, GATE_COOKIE_SECRET, algorithms=["HS256"])
+
+        self.assertEqual(len(cookie_value.split(".")), 3)
+        self.assertEqual(header["typ"], "JWT")
+        self.assertEqual(header["alg"], "HS256")
+        self.assertEqual(payload["typ"], "gate")
+        self.assertIs(payload["passed"], True)
+        self.assertIn("iat", payload)
+        self.assertIn("exp", payload)
+
+    def test_gate_cookie_uses_jwt_library_instead_of_manual_signing(self):
+        root = os.path.dirname(os.path.dirname(__file__))
+        gate_cookie_module = os.path.join(root, "common", "gate_cookie.py")
+
+        with open(gate_cookie_module, encoding="utf-8") as file:
+            source = file.read()
+
+        self.assertIn("import jwt", source)
+        self.assertNotIn("import hmac", source)
+        self.assertNotIn("import hashlib", source)
+        self.assertNotIn("urlsafe_b64", source)
 
     def test_gate_verify_falls_back_to_jwt_secret_for_existing_local_env(self):
         with gate_test_environment(include_gate_cookie_secret=False):

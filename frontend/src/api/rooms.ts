@@ -1,5 +1,6 @@
 import { apiClient } from "./client";
-import type { Room, RoomWithMessages, CreateRoomRequest, UpdateRoomRequest, Usercnt } from "../types/chat";
+import type { CreateRoomRequest, Room, RoomWithMessages, UpdateRoomRequest } from "../types/chat";
+import type { Usercnt } from "../types/user";
 
 
 

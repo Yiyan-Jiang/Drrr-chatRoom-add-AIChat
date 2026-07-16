@@ -1,6 +1,5 @@
 import { apiClient } from "./client";
-import type { LoginCredentials, LoginResponse } from "../types/chat";
-
+import type { LoginCredentials, LoginResponse } from "../types/auth";
 
 export const authApi = {
   // 返回 token 用于 socket.io

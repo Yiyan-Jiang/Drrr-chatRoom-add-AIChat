@@ -1,7 +1,7 @@
 /**
  * @parm 组件用途：切换 AI 聊天角色的标签栏。
  */
-import type { AICharacter } from '@/types/chat'
+import type { AICharacter } from '@/types/ai'
 
 export interface AICharacterOption {
   value: AICharacter

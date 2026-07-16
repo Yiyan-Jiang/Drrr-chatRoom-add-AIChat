@@ -5,7 +5,7 @@ import type {
   FriendRequestDirection,
   PaginatedFriendRequestsResponse,
   PaginatedFriendsResponse,
-} from '@/types/chat'
+} from '@/types/friends'
 
 export const friendsApi = {
   listFriends: async (params?: { page?: number; pageSize?: number }): Promise<PaginatedFriendsResponse> => {

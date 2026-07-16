@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import base64
 from datetime import datetime, timedelta, timezone
-import hashlib
-import hmac
-import json
 import os
 
+import jwt
 
 GATE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7
 
@@ -27,17 +24,22 @@ def create_gate_cookie_value(
 ) -> str:
     actual_secret = secret or get_gate_cookie_secret()
     actual_now = now or datetime.now(timezone.utc)
-    payload = {
-        "passed": True,
-        "exp": int((actual_now + timedelta(seconds=GATE_COOKIE_MAX_AGE_SECONDS)).timestamp()),
-    }
-    payload_segment = _base64url_encode(
-        json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    token = jwt.encode(
+        {
+            "typ": "gate",
+            "passed": True,
+            "iat": actual_now,
+            "exp": actual_now + timedelta(seconds=GATE_COOKIE_MAX_AGE_SECONDS),
+        },
+        actual_secret,
+        algorithm="HS256",
+        headers={"typ": "JWT"},
     )
-    signature = _sign(payload_segment, actual_secret)
-    return f"{payload_segment}.{signature}"
+    if isinstance(token, bytes):
+        token = token.decode("utf-8")
+    return token
 
-
+# 校验 cookie 是否被篡改
 def is_gate_cookie_valid(
     cookie_value: str | None,
     *,
@@ -47,42 +49,26 @@ def is_gate_cookie_valid(
     if not cookie_value:
         return False
 
-    payload_segment, separator, signature = cookie_value.partition(".")
-    if not separator or not payload_segment or not signature:
-        return False
-
     actual_secret = secret or get_gate_cookie_secret()
-    expected_signature = _sign(payload_segment, actual_secret)
-    if not hmac.compare_digest(signature, expected_signature):
-        return False
-
     try:
-        payload = json.loads(_base64url_decode(payload_segment).decode("utf-8"))
-    except (ValueError, TypeError, json.JSONDecodeError):
+        payload = jwt.decode(
+            cookie_value,
+            actual_secret,
+            algorithms=["HS256"],
+            options={
+                "require": ["typ", "passed", "iat", "exp"],
+                "verify_exp": now is None,
+            },
+        )
+    except (jwt.InvalidTokenError, ValueError, TypeError):
         return False
 
+    if payload.get("typ") != "gate" or payload.get("passed") is not True:
+        return False
+
+    actual_now = now or datetime.now(timezone.utc)
     try:
         expires_at = int(payload["exp"])
     except (KeyError, TypeError, ValueError):
         return False
-
-    actual_now = now or datetime.now(timezone.utc)
-    return payload.get("passed") is True and expires_at > int(actual_now.timestamp())
-
-
-def _sign(payload_segment: str, secret: str) -> str:
-    digest = hmac.new(
-        secret.encode("utf-8"),
-        payload_segment.encode("utf-8"),
-        hashlib.sha256,
-    ).digest()
-    return _base64url_encode(digest)
-
-
-def _base64url_encode(value: bytes) -> str:
-    return base64.urlsafe_b64encode(value).decode("ascii").rstrip("=")
-
-
-def _base64url_decode(value: str) -> bytes:
-    padding = "=" * (-len(value) % 4)
-    return base64.urlsafe_b64decode(f"{value}{padding}")
+    return expires_at > int(actual_now.timestamp())

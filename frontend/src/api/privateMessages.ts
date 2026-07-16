@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import type { PaginatedPrivateMessagesResponse } from '@/types/chat'
+import type { PaginatedPrivateMessagesResponse } from '@/types/privateMessages'
 
 export const privateMessagesApi = {
   getPageByFriend: async (

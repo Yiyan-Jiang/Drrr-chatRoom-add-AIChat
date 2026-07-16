@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { authApi } from '@/api/auth'
-import { gateApi } from '@/api/gate'
 import { useAuth } from '@/contexts/AuthContext'
 import { handleApiError } from '@/utils/errorHandler'
-import type { LoginCredentials } from '@/types/chat'
+import type { LoginCredentials } from '@/types/auth'
 import ShowUser from '@/components/ShowUser'
 import AuthBrand from '@/components/auth/AuthBrand'
 import LoginForm from '@/components/auth/LoginForm'
@@ -21,18 +20,6 @@ export default function Login() {
   })
   const [loading, setLoading] = useState(false)
   const [focusedField, setFocusedField] = useState<string | null>(null)
-
-  useEffect(() => {
-    const checkGate = async () => {
-      try {
-        await gateApi.check()
-      } catch {
-        navigate('/gate', { replace: true })
-      }
-    }
-
-    checkGate()
-  }, [navigate])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target

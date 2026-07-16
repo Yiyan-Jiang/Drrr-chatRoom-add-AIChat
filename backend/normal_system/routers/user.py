@@ -5,7 +5,6 @@ from common.dependencies import get_current_user_id, require_gate_passed
 from common.normal_database import async_session
 from normal_system.schemas import (
     UserCreate,
-    UserInDB,
     UserProfileUpdate,
     UserPublic,
     UserUpdate,
@@ -36,7 +35,7 @@ async def get_count(db: AsyncSession = Depends(get_db)):
     return {'total': count}
 
 
-@router.post("/register", response_model=UserInDB, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=UserPublic, status_code=status.HTTP_201_CREATED)
 async def register_user(
     user: UserCreate,
     db: AsyncSession = Depends(get_db),
@@ -72,7 +71,7 @@ async def update_current_user_profile(
     return updated_user
 
 
-@router.get("/username/{username}", response_model=UserInDB)
+@router.get("/username/{username}", response_model=UserPublic)
 async def read_user_by_username(username: str, db: AsyncSession = Depends(get_db)):
     user = await get_user_by_username(db, username)
     if not user:
@@ -80,7 +79,7 @@ async def read_user_by_username(username: str, db: AsyncSession = Depends(get_db
     return user
 
 
-@router.get("/{user_id}", response_model=UserInDB)
+@router.get("/{user_id}", response_model=UserPublic)
 async def read_user(user_id: int, db: AsyncSession = Depends(get_db)):
     user = await get_user_by_id(db, user_id)
     if not user:
@@ -88,7 +87,7 @@ async def read_user(user_id: int, db: AsyncSession = Depends(get_db)):
     return user
 
 
-@router.put("/{user_id}", response_model=UserInDB)
+@router.put("/{user_id}", response_model=UserPublic)
 async def update_user_info(
         user_id: int,
         user_update: UserUpdate,

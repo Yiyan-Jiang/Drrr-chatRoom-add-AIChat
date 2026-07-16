@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { usersApi } from '@/api/users';
-import { gateApi } from '@/api/gate';
 import { handleApiError } from '@/utils/errorHandler';
-import type { RegisterRequest } from '@/types/chat';
+import type { RegisterRequest } from '@/types/auth';
 import ShowUser from '@/components/ShowUser';
 import AuthBrand from '@/components/auth/AuthBrand';
 import RegisterForm from '@/components/auth/RegisterForm';
@@ -12,16 +11,6 @@ import RegisterForm from '@/components/auth/RegisterForm';
 export default function Register() {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const checkGate = async () => {
-      try {
-        await gateApi.check();
-      } catch {
-        navigate('/gate', { replace: true });
-      }
-    };
-    checkGate();
-  }, [navigate]);
   const [form, setForm] = useState<RegisterRequest>({
     username: '',
     password: '',

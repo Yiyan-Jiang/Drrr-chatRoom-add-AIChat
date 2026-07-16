@@ -18,10 +18,6 @@ export const gateApi = {
       logger.debug('[gate] verify response received');
       return data;
     } catch (error: unknown) {
-      logger.error('[gate] verify error', {
-        status: error instanceof AxiosError ? error.response?.status : undefined,
-        message: error instanceof Error ? error.message : String(error),
-      });
       throw error;
     }
   },

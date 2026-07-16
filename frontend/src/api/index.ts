@@ -1,4 +1,4 @@
-// 统一导出所有 API，便于 import 使用
+// 统一导出所有 API
 
 export * from './client';
 export * from './auth';
