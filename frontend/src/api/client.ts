@@ -52,6 +52,7 @@ apiClient.interceptors.response.use(
         if (error.config?.url && error.config.url.includes('/gate')) {
           return Promise.reject(error);
         }
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
         // 未授权，清除本地存储
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');

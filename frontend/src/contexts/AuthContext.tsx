@@ -1,9 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { usersApi } from '@/api/users';
+import { socketManager } from '@/services/socket';
 import type { LoginResponse } from '../types/auth';
 import type { User } from '../types/user';
-import { socketManager } from '@/services/socket';
 
 interface AuthContextType {
   user: User | null;
@@ -12,6 +13,7 @@ interface AuthContextType {
   updateUser: (user: User) => void;
   logout: () => void;
   isAuthenticated: boolean;
+  isAuthChecking: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,28 +24,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return saved ? JSON.parse(saved) : null;
   });
   const [token, setToken] = useState<string | null>(
-    localStorage.getItem('access_token')
+    localStorage.getItem('access_token'),
+  );
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(() =>
+    Boolean(localStorage.getItem('access_token')),
   );
 
-  useEffect(() => {
-    if (token) {
-      // 连接Socket，socketManager会处理token变化和重复连接
-      socketManager.connect(token);
-    } else {
-      // 没有token时断开连接
-      socketManager.disconnect();
-    }
-
-    // 组件卸载时清理
-    return () => {
-      // 注意：不要在这里断开连接，因为其他组件可能还需要连接
-      // 只在token变化时由上面的逻辑处理
-    };
-  }, [token]);
+  const clearAuth = useCallback(() => {
+    setUser(null);
+    setToken(null);
+    setIsAuthChecking(false);
+    localStorage.removeItem('user');
+    localStorage.removeItem('access_token');
+    socketManager.disconnect();
+  }, []);
 
   const login = useCallback((data: LoginResponse) => {
     setUser(data.user);
     setToken(data.access_token);
+    setIsAuthChecking(true);
     localStorage.setItem('user', JSON.stringify(data.user));
     localStorage.setItem('access_token', data.access_token);
   }, []);
@@ -54,16 +53,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('user');
-    localStorage.removeItem('access_token');
-    socketManager.disconnect();
-  }, []);
+    clearAuth();
+  }, [clearAuth]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function validateToken() {
+      if (!token) {
+        setIsAuthChecking(false);
+        socketManager.disconnect();
+        return;
+      }
+
+      setIsAuthChecking(true);
+      try {
+        const currentUser = await usersApi.getMe();
+        if (cancelled) return;
+        setUser(currentUser);
+        localStorage.setItem('user', JSON.stringify(currentUser));
+        socketManager.connect(token);
+      } catch {
+        if (!cancelled) {
+          clearAuth();
+        }
+      } finally {
+        if (!cancelled) {
+          setIsAuthChecking(false);
+        }
+      }
+    }
+
+    validateToken();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, clearAuth]);
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      clearAuth();
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
+  }, [clearAuth]);
 
   const value = useMemo(
-    () => ({ user, token, login, updateUser, logout, isAuthenticated: !!token }),
-    [user, token, login, updateUser, logout],
+    () => ({
+      user,
+      token,
+      login,
+      updateUser,
+      logout,
+      isAuthenticated: Boolean(token && user),
+      isAuthChecking,
+    }),
+    [user, token, login, updateUser, logout, isAuthChecking],
   );
 
   return (
@@ -75,6 +124,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth必须在AuthProvider内使用');
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 };
