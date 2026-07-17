@@ -30,7 +30,8 @@ const PrivateChat = lazy(() => import('../pages/room/PrivateChat'))
 const NotFound = lazy(() => import('../pages/NotFound'))
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isAuthChecking } = useAuth()
+  if (isAuthChecking) return null
   return isAuthenticated ? children : <Navigate to="/login" replace />
 }
 
