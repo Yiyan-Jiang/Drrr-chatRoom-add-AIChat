@@ -1,6 +1,7 @@
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from ai.models.agent_memory import AgentMemory
 from ai.models.agent_session import AgentSession
 from ai.models.agent_turn import AgentTurn
 
@@ -53,3 +54,4 @@ class TurnWorkspace:
     command: AITurnCommand
     session: AgentSession
     recent_turns: list[AgentTurn]
+    long_term_memories: list[AgentMemory] = field(default_factory=list)

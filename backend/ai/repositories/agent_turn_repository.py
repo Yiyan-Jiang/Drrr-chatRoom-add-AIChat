@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai.models.agent_session import AgentSession
 from ai.models.agent_turn import AgentTurn
+from ai.memory.repositories import clear_user_agent_memory
 from ai.repositories.agent_session_repository import get_agent_session_for_update
 
 
@@ -56,7 +57,12 @@ async def clear_user_agent_history(
     db: AsyncSession,
     user_id: int,
     character: str,
-) -> tuple[int, int]:
+) -> tuple[int, int, int]:
+    cleared_memories, _cleared_memory_events = await clear_user_agent_memory(
+        db=db,
+        user_id=user_id,
+        character=character,
+    )
     session_result = await db.execute(
         select(AgentSession.session_id)
         .join(AgentTurn, AgentTurn.session_id == AgentSession.session_id)
@@ -69,7 +75,7 @@ async def clear_user_agent_history(
     )
     session_ids = list(session_result.scalars().all())
     if not session_ids:
-        return 0, 0
+        return 0, 0, cleared_memories
 
     turns_result = await db.execute(
         delete(AgentTurn).where(
@@ -84,7 +90,7 @@ async def clear_user_agent_history(
             AgentSession.session_id.in_(session_ids),
         )
     )
-    return sessions_result.rowcount or 0, turns_result.rowcount or 0
+    return sessions_result.rowcount or 0, turns_result.rowcount or 0, cleared_memories
 
 
 async def append_turn_pair(

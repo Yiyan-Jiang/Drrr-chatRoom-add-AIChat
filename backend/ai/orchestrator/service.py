@@ -24,6 +24,7 @@ from ai.repositories.agent_audit_repository import (
 )
 from ai.repositories.agent_session_repository import get_agent_session_for_update
 from ai.repositories.agent_turn_repository import list_recent_turns
+from ai.memory.repositories import list_relevant_memories
 
 
 class AITurnDependencies(Protocol):
@@ -110,7 +111,19 @@ class RepositoryAITurnDependencies:
                     raise SessionNotActive(f"Session is not active: {session.session_id}")
 
                 recent_turns = await list_recent_turns(db, locked_session.session_id, limit=20)
-                workspace = build_workspace(command, locked_session, recent_turns)
+                long_term_memories = await list_relevant_memories(
+                    db=db,
+                    user_id=command.user_id,
+                    character=command.character,
+                    query=command.message,
+                    limit=8,
+                )
+                workspace = build_workspace(
+                    command,
+                    locked_session,
+                    recent_turns,
+                    long_term_memories=long_term_memories,
+                )
                 run_result = await run_fake_harness(workspace)
                 response = assemble_response(command, locked_session, run_result)
                 await mark_stage("persisting")

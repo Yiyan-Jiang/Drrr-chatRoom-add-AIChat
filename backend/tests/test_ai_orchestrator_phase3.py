@@ -271,6 +271,7 @@ class AITurnRouterTest(unittest.IsolatedAsyncioTestCase):
     async def test_turn_router_maps_orchestrator_error_to_http_detail(self):
         from unittest.mock import patch
 
+        from fastapi import BackgroundTasks
         from fastapi import HTTPException
 
         from ai.orchestrator.errors import RequestInProgress
@@ -284,6 +285,7 @@ class AITurnRouterTest(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(HTTPException) as error:
                 await create_ai_turn(
                     AITurnRequest(request_id="request-7", message="hello"),
+                    background_tasks=BackgroundTasks(),
                     user_id=7,
                 )
 
@@ -299,6 +301,7 @@ class AITurnRouterTest(unittest.IsolatedAsyncioTestCase):
     async def test_turn_router_maps_harness_error_to_http_detail(self):
         from unittest.mock import patch
 
+        from fastapi import BackgroundTasks
         from fastapi import HTTPException
 
         from ai.harness.errors import PlannerInvalidAction
@@ -312,6 +315,7 @@ class AITurnRouterTest(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(HTTPException) as error:
                 await create_ai_turn(
                     AITurnRequest(request_id="request-8", message="hello"),
+                    background_tasks=BackgroundTasks(),
                     user_id=7,
                 )
 
@@ -324,9 +328,48 @@ class AITurnRouterTest(unittest.IsolatedAsyncioTestCase):
             },
         )
 
+    async def test_turn_router_registers_memory_background_task_after_success(self):
+        from unittest.mock import AsyncMock, patch
+
+        from fastapi import BackgroundTasks
+
+        from ai.routers.turn import create_ai_turn
+        from ai.schemas.turn import AITurnRequest
+        from ai.orchestrator.schemas import AITurnResult
+
+        async def fake_handle_turn(_command):
+            return AITurnResult(
+                request_id="request-9",
+                session_id="s-1",
+                answer="hello",
+                status="completed",
+            )
+
+        background_tasks = BackgroundTasks()
+        with patch("ai.routers.turn.handle_turn", AsyncMock(side_effect=fake_handle_turn)), patch(
+            "ai.routers.turn.enqueue_memory_extraction_for_request",
+            AsyncMock(),
+        ) as enqueue_memory:
+            response = await create_ai_turn(
+                AITurnRequest(request_id="request-9", message="hello", character="rin"),
+                background_tasks=background_tasks,
+                user_id=7,
+            )
+            enqueue_memory.assert_not_awaited()
+            await background_tasks()
+
+        self.assertEqual(response.answer, "hello")
+        enqueue_memory.assert_awaited_once_with(
+            request_id="request-9",
+            user_id=7,
+            session_id="s-1",
+            character="rin",
+        )
+
     async def test_turn_stream_router_returns_sse_response(self):
         from unittest.mock import AsyncMock, patch
 
+        from fastapi import BackgroundTasks
         from fastapi.responses import StreamingResponse
 
         from ai.routers.turn import create_ai_turn_stream
@@ -342,18 +385,29 @@ class AITurnRouterTest(unittest.IsolatedAsyncioTestCase):
                 trace_id="trace-1",
             )
 
-        with patch("ai.routers.turn.handle_turn", AsyncMock(side_effect=fake_handle_turn)):
+        background_tasks = BackgroundTasks()
+        with patch("ai.routers.turn.handle_turn", AsyncMock(side_effect=fake_handle_turn)), patch(
+            "ai.routers.turn.enqueue_memory_extraction_for_request",
+            AsyncMock(),
+        ) as enqueue_memory:
             response = await create_ai_turn_stream(
                 AITurnRequest(request_id="request-stream-1", message="hello"),
+                background_tasks=background_tasks,
                 user_id=7,
             )
 
             self.assertIsInstance(response, StreamingResponse)
             self.assertEqual(response.media_type, "text/event-stream")
+            self.assertEqual(len(background_tasks.tasks), 1)
 
             chunks = []
             async for chunk in response.body_iterator:
-                chunks.append(chunk.decode() if isinstance(chunk, bytes) else chunk)
+                text = chunk.decode() if isinstance(chunk, bytes) else chunk
+                chunks.append(text)
+                self.assertEqual(len(background_tasks.tasks), 1)
+            self.assertEqual(len(background_tasks.tasks), 1)
+            enqueue_memory.assert_not_awaited()
+            await response.background()
 
         body = "".join(chunks)
         self.assertIn("event: session", body)
@@ -361,6 +415,12 @@ class AITurnRouterTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("hello st", body)
         self.assertIn("ream", body)
         self.assertIn("data: [DONE]", body)
+        enqueue_memory.assert_awaited_once_with(
+            request_id="request-stream-1",
+            user_id=7,
+            session_id="s-1",
+            character=None,
+        )
 
     async def test_history_router_uses_authenticated_user_and_repository_page(self):
         from datetime import datetime
@@ -440,7 +500,7 @@ class AITurnRouterTest(unittest.IsolatedAsyncioTestCase):
         context = FakeSessionContext()
         with patch("ai.routers.turn.get_ai_sessionmaker", return_value=lambda: context), patch(
             "ai.routers.turn.clear_user_agent_history",
-            AsyncMock(return_value=(1, 2)),
+            AsyncMock(return_value=(1, 2, 3)),
         ) as clear_history:
             response = await clear_ai_turn_history(character="rin", user_id=7)
 
@@ -448,7 +508,10 @@ class AITurnRouterTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(clear_history.await_args.kwargs["user_id"], 7)
         self.assertEqual(clear_history.await_args.kwargs["character"], "rin")
         self.assertEqual(context.db.commits, 1)
-        self.assertEqual(response, {"cleared_sessions": 1, "cleared_turns": 2})
+        self.assertEqual(
+            response,
+            {"cleared_sessions": 1, "cleared_turns": 2, "cleared_memories": 3},
+        )
 
 
 class RepositoryAITurnDependenciesTest(unittest.IsolatedAsyncioTestCase):

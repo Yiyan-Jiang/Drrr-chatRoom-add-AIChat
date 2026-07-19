@@ -10,8 +10,10 @@ class ConversationSummary:
 
 @dataclass(frozen=True)
 class AgentMemoryItem:
-    user_id: str
+    user_id: int
     session_id: str
     memory_type: str
     content: str
     source_sequence_no: int
+    importance: int = 3
+    confidence: float = 0.8

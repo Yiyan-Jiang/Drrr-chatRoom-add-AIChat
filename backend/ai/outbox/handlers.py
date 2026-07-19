@@ -36,6 +36,8 @@ async def _noop_handler(_event: OutboxEvent) -> None:
 
 
 def create_default_handler_registry() -> OutboxHandlerRegistry:
+    from ai.memory.worker import handle_memory_extract_requested
+
     registry = OutboxHandlerRegistry()
     for event_type in (
         "turn_completed",
@@ -44,4 +46,5 @@ def create_default_handler_registry() -> OutboxHandlerRegistry:
         "run_failed",
     ):
         registry.register(event_type, _noop_handler)
+    registry.register("ai_memory_extract_requested", handle_memory_extract_requested)
     return registry

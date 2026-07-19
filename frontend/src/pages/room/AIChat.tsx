@@ -11,10 +11,10 @@ import ChatRoomHeader from '@/components/chat/ChatRoomHeader'
 import { getUserDisplayName } from '@/utils/userDisplayName'
 
 const CHARACTERS: { value: AICharacter; label: string; desc: string; avatarKey: string }[] = [
-  { value: 'sakura', label: '小樱', desc: '傲娇系猫耳女仆', avatarKey: 'pink' },
-  { value: 'rin', label: '凛', desc: '三无少女', avatarKey: 'gray' },
-  { value: 'mio', label: '澪', desc: '病娇少女', avatarKey: 'zaika' },
-  { value: 'yang', label: '葵', desc: '超级元气话痨少女', avatarKey: 'kanra' },
+  { value: 'sakura', label: '小樱', desc: '傲娇', avatarKey: 'pink' },
+  { value: 'rin', label: '凛', desc: '三无', avatarKey: 'gray' },
+  { value: 'mio', label: '澪', desc: '病娇', avatarKey: 'zaika' },
+  { value: 'yang', label: '葵', desc: '元气', avatarKey: 'kanra' },
 ]
 
 type AIChatLogItem = {
@@ -25,9 +25,11 @@ type AIChatLogItem = {
   created_at?: string
 }
 
+// AI 消息在 UI 中的固定用户 ID（0 表示非真实用户）
 const ASSISTANT_USER_ID = 0
 const DEFAULT_CHARACTER: AICharacter = 'sakura'
 
+// 校验是否是可选角色，保留回退
 function normalizeCharacter(value: string | null): AICharacter {
   return CHARACTERS.some((char) => char.value === value) ? (value as AICharacter) : DEFAULT_CHARACTER
 }
