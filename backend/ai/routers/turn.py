@@ -1,11 +1,12 @@
 import asyncio
 import json
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 from ai.database import get_ai_sessionmaker
 from ai.harness.errors import HarnessError
+from ai.memory.background import enqueue_memory_extraction_for_request
 from ai.orchestrator.errors import OrchestratorError
 from ai.orchestrator.schemas import AITurnCommand
 from ai.orchestrator.service import handle_turn
@@ -21,6 +22,30 @@ from ai.schemas.turn import AITurnHistoryItem, AITurnHistoryResponse, AITurnRequ
 from common.dependencies import get_current_user_id
 
 router = APIRouter(prefix="/ai", tags=["ai"])
+
+
+class DeferredMemoryExtractionTask:
+    def __init__(self) -> None:
+        self._payload: dict | None = None
+
+    def set_payload(
+        self,
+        request_id: str,
+        user_id: int,
+        session_id: str,
+        character: str | None,
+    ) -> None:
+        self._payload = {
+            "request_id": request_id,
+            "user_id": user_id,
+            "session_id": session_id,
+            "character": character,
+        }
+
+    async def __call__(self) -> None:
+        if self._payload is None:
+            return
+        await enqueue_memory_extraction_for_request(**self._payload)
 
 
 def _normalize_history_limit(limit: int) -> int:
@@ -44,6 +69,7 @@ def _chunk_text(text: str, size: int = 8) -> list[str]:
 @router.post("/turn", response_model=AITurnResponse)
 async def create_ai_turn(
     request: AITurnRequest,
+    background_tasks: BackgroundTasks,
     user_id: int = Depends(get_current_user_id),
 ):
     command = AITurnCommand(
@@ -66,12 +92,20 @@ async def create_ai_turn(
             status_code=502,
             detail={"error_code": exc.error_code, "message": str(exc)},
         ) from exc
+    background_tasks.add_task(
+        enqueue_memory_extraction_for_request,
+        request_id=result.request_id,
+        user_id=user_id,
+        session_id=result.session_id,
+        character=request.character,
+    )
     return AITurnResponse(**result.to_payload())
 
 
 @router.post("/turn/stream")
 async def create_ai_turn_stream(
     request: AITurnRequest,
+    background_tasks: BackgroundTasks,
     user_id: int = Depends(get_current_user_id),
 ):
     command = AITurnCommand(
@@ -83,6 +117,9 @@ async def create_ai_turn_stream(
         metadata=request.metadata or {},
     )
 
+    memory_task = DeferredMemoryExtractionTask()
+    background_tasks.add_task(memory_task)
+
     async def generate():
         try:
             result = await handle_turn(command)
@@ -91,6 +128,12 @@ async def create_ai_turn_stream(
                 yield _sse_data(chunk)
                 await asyncio.sleep(0.02)
             yield _sse_data("[DONE]")
+            memory_task.set_payload(
+                request_id=result.request_id,
+                user_id=user_id,
+                session_id=result.session_id,
+                character=request.character,
+            )
         except OrchestratorError as exc:
             payload = {
                 "error_code": exc.error_code,
@@ -109,6 +152,7 @@ async def create_ai_turn_stream(
     return StreamingResponse(
         generate(),
         media_type="text/event-stream",
+        background=background_tasks,
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
@@ -173,7 +217,7 @@ async def clear_ai_turn_history(
 ):
     actual_character = normalize_character(character or DEFAULT_CHARACTER)
     async with get_ai_sessionmaker()() as db:
-        cleared_sessions, cleared_turns = await clear_user_agent_history(
+        cleared_sessions, cleared_turns, cleared_memories = await clear_user_agent_history(
             db=db,
             user_id=user_id,
             character=actual_character,
@@ -182,4 +226,5 @@ async def clear_ai_turn_history(
     return {
         "cleared_sessions": cleared_sessions,
         "cleared_turns": cleared_turns,
+        "cleared_memories": cleared_memories,
     }

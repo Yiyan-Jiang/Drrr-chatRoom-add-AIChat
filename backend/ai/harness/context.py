@@ -37,6 +37,7 @@ _SECTION_PRIORITY = {
     "skill_checkpoint_schema": 1,
     "artifact_summaries": 2,
     "observations": 3,
+    "long_term_memories": 4,
     "recent_events": 4,
     "recent_turns": 5,
 }
@@ -168,6 +169,11 @@ def compile_context(
     _add_section(candidates, "recent_events", _recent_events_content(events))
     _add_section(candidates, "observations", _observations_content(events))
     _add_section(candidates, "artifact_summaries", _artifact_summaries_content(artifacts))
+    _add_section(
+        candidates,
+        "long_term_memories",
+        _long_term_memories_content(getattr(workspace, "long_term_memories", []) or []),
+    )
     _add_section(candidates, "recent_turns", _recent_turns_content(workspace.recent_turns))
     _add_section(candidates, "current_input", current_message, role="user")
 
@@ -252,6 +258,21 @@ def _artifact_summaries_content(artifacts: list) -> str:
                 "artifact_id": getattr(artifact, "artifact_id", None),
                 "artifact_type": getattr(artifact, "artifact_type", None),
                 "summary": summary,
+            }
+        )
+    return _json(summaries) if summaries else ""
+
+
+def _long_term_memories_content(memories: list) -> str:
+    summaries = []
+    for memory in memories[:8]:
+        summaries.append(
+            {
+                "type": getattr(memory, "memory_type", "memory"),
+                "content": getattr(memory, "content", ""),
+                "importance": getattr(memory, "importance", None),
+                "confidence": getattr(memory, "confidence", None),
+                "source": "past_conversation",
             }
         )
     return _json(summaries) if summaries else ""

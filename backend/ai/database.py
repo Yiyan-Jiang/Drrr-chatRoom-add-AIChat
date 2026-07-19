@@ -111,6 +111,7 @@ async def get_ai_db():
 
 async def init_ai_db() -> None:
     import ai.models.agent_artifact  # noqa: F401
+    import ai.models.agent_memory  # noqa: F401
     import ai.models.agent_session  # noqa: F401
     import ai.models.agent_turn  # noqa: F401
     import ai.models.agent_turn_audit  # noqa: F401
