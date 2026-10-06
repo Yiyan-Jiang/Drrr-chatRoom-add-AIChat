@@ -13,23 +13,22 @@
 | 层面 | 技术 | 说明 |
 |------|------|------|
 | 后端框架 | FastAPI + Socket.IO | HTTP API 与实时聊天共用一个 ASGI 应用 |
-| 后端数据 | SQLAlchemy async + Alembic | 普通聊天室和 AI 系统分别管理迁移 |
+| 后端数据 | SQLAlchemy async + Alembic | MySQL 业务库使用 normal_system 迁移 |
 | 认证 | JWT | HTTP Bearer token 与 Socket.IO auth token 共用 |
 | 前端框架 | React + TypeScript + Vite | React Router 管理页面路由 |
-| 前端通信 | Axios + Socket.IO Client + fetch SSE | 普通 API、实时聊天、AI 流式回答分开 |
+| 前端通信 | Axios + Socket.IO Client | HTTP API 与实时聊天分开 |
 | 样式 | Tailwind CSS + CSS 文件 | 组件内按现有写法延续 |
 
 ### 目录职责
 
 - `backend/main.py` - uvicorn 启动入口，运行 `socketio_app`。
-- `backend/app_factory.py` - 创建 FastAPI 应用、配置 CORS、挂载普通与 AI 路由。
+- `backend/app_factory.py` - 创建 FastAPI 应用、配置 CORS、挂载业务路由。
 - `backend/common/` - JWT、认证依赖、普通数据库连接。
 - `backend/normal_system/` - 普通用户、房间、消息、Socket.IO 实时层。
-- `backend/ai/` - AI 聊天路由、编排、历史、治理、运行时和模型接入。
 - `frontend/src/api/` - Axios API 封装，统一处理 token 和 401。
 - `frontend/src/services/socket/` - 全局 Socket.IO 单例和事件绑定。
 - `frontend/src/contexts/AuthContext.tsx` - 登录态、本地 token、Socket 连接生命周期。
-- `frontend/src/hooks/` - 普通聊天室、AI 聊天、滚动等状态逻辑。
+- `frontend/src/hooks/` - 群聊、私聊、滚动等状态逻辑。
 - `frontend/src/pages/` - 页面入口，负责组装组件和 hook。
 - `frontend/src/components/` - 业务组件与通用组件。
 
@@ -57,15 +56,13 @@
 ### 2.3 Hooks 管理页面状态和副作用
 
 - 普通聊天室状态优先放在 `useRoomChat` 或同层 hook。
-- AI 聊天流式请求优先放在 `useAIchat` 或同层 hook。
 - 滚动、分页、乐观消息、ack 超时等副作用不要写进页面组件。
-- 新 hook 要返回清晰的 state 与 action，不暴露内部计时器、reader、socket 细节。
+- 新 hook 要返回清晰的 state 与 action，不暴露内部计时器、socket 细节。
 
 ### 2.4 API / Socket Service 按协议拆分
 
 - HTTP API 放在 `frontend/src/api/`，统一使用 `apiClient`。
 - Socket.IO 事件放在 `frontend/src/services/socket/socketManager.ts`。
-- AI SSE 目前在 `useAIchat` 内用 `fetch` 读取流；如抽象，保持和普通聊天室协议分离。
 
 ---
 
@@ -84,12 +81,6 @@
 - 数据库访问通过 `normal_system.repositories`，不要在 router 里手写复杂 SQL。
 - 在线成员状态使用 `RoomPresence`，不要在前端伪造在线人数。
 
-### 3.3 AI 聊天域
-
-- 前端使用的 AI 入口是 `backend/ai/routers/turn.py`。
-- `/api/ai/turn/stream` 返回 SSE，前端按 `event:` 和 `data:` 解析。
-- AI session、turn、history 逻辑保持在 `backend/ai/` 内，不复用普通聊天室 message 表。
-- AI 角色选择必须经过 `normalize_character()` 这类现有入口。
 
 ---
 
@@ -110,13 +101,6 @@
 4. 加入房间、发送消息、新消息、成员列表走 Socket.IO。
 5. 前端用 `client_message_id` 做乐观消息和 ack 合并。
 
-### 4.3 AI 聊天数据流
-
-1. `AIChat` 选择角色并调用 `useAIchat({ character })`。
-2. 历史记录走 `/api/ai/turn/history`。
-3. 发送消息走 `/api/ai/turn/stream`。
-4. SSE 中的 `session` 事件更新 session，`data` 片段累积成回答。
-5. 清空历史走 `DELETE /api/ai/turn/history?character=...`。
 
 ---
 
@@ -124,7 +108,7 @@
 
 | 约定 | 要点 |
 |------|------|
-| 普通聊天和 AI 聊天分离 | 不要把 AI 消息塞进普通聊天室 message 协议 |
+| 存储边界 | 当前只使用 MySQL；缓存、Kafka 和新服务进程按已确认的阶段计划引入 |
 | Socket 事件名稳定 | 改事件名必须同步后端 socket、前端 socketManager、hook 和测试 |
 | token 双通道一致 | HTTP 和 Socket.IO 都依赖同一 JWT 语义 |
 | 数据库迁移优先 | 启动时会校验 Alembic revision，不要绕过迁移校验 |
@@ -146,7 +130,6 @@
 | `/register` | `Register` | 注册 |
 | `/home/rooms` | `RoomSelect` | 房间列表入口 |
 | `/chat/:roomId` | `ChatRoom` | 普通聊天室，需要登录 |
-| `/ai-chat` | `AIChat` | AI 聊天，需要登录 |
 | `/news/:slug` | `NewsArticleDetail` | 新闻详情 |
 | `/board/:issueNumber` | `MessageBoardIssueDetail` | 留言板详情 |
 
@@ -158,7 +141,6 @@
 | `/api/users` | `normal_system/routers/user.py` | 用户相关 |
 | `/api/rooms` | `normal_system/routers/room.py` | 房间 CRUD |
 | `/api/messages` | `normal_system/routers/message.py` | 消息 HTTP 辅助接口 |
-| `/api/ai` | `ai/routers/turn.py` 等 | AI turn、history、stream |
 | `/api/gate` | `normal_system/routers/gate.py` | 门禁 |
 
 ---
@@ -171,7 +153,6 @@
 | 登录态 / token / socket 生命周期 | `frontend/src/contexts/AuthContext.tsx` |
 | Socket.IO 单例 | `frontend/src/services/socket/socketManager.ts` |
 | 普通聊天室状态机 | `frontend/src/hooks/useRoomChat.ts` |
-| AI 聊天 SSE hook | `frontend/src/hooks/useAIchat.ts` |
 | 聊天滚动 | `frontend/src/hooks/useChatScroll.ts` |
 | 用户展示名 | `frontend/src/utils/userDisplayName.ts` |
 | 房间列表组件 | `frontend/src/components/room/` |

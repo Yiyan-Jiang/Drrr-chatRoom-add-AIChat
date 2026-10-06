@@ -1,28 +1,27 @@
 # Login and Chat Rooms
 
-一个基于 `FastAPI + React + Socket.IO` 的登录与聊天室项目，包含普通聊天和 AI 聊天两套能力。
+基于 FastAPI + React + Socket.IO 的实时聊天项目，包含门禁、账号、群聊、好友私聊、帖子和 GitHub Issues 留言板。
 
+业务数据只使用 MySQL，数据库迁移由 SQLAlchemy async + Alembic 管理。AI 功能及 PostgreSQL 依赖已移除。
 
-- 门禁系统：进入应用前的校验页，用来限制访问
-- 账号系统：注册、登录、退出和用户信息管理
-- 聊天系统：房间列表、进入房间、实时收发消息
-- AI 聊天系统：单独的 AI 对话页面，支持流式返
+后续以消息可靠存储、缓存、Kafka、并发控制、断线补齐和多实例投递为演进方向；目前仍是单进程聊天室，尚未引入 Redis 或 Kafka。
 
-## 技术栈
+## 本地运行
 
-- 后端：FastAPI、SQLAlchemy、Socket.IO、MySQL、PostgreSQL、OpenAI SDK
-- 前端：React、TypeScript、Vite、React Router、Axios、Tailwind CSS、Socket.IO Client
-
-## 运行
-
-后端：
+1. 准备 Python、Node.js 和 MySQL，创建 `chat_rooms` 数据库及有权限访问它的用户。
+2. 将 `backend/.env.example` 复制为 `backend/.env`，填写 `DATABASE_URL`、门禁密码、门禁签名密钥和 JWT 密钥。
+3. 安装依赖、应用迁移并启动后端：
 
 ```bash
 cd backend
+python -m pip install -r requirements.txt
+alembic -c normal_system/alembic.ini upgrade head
 python main.py
 ```
 
-前端：
+已有旧版数据库时，先检查现有表结构与迁移记录，参考 [数据库说明](core/README.md)，不要直接对不匹配的旧表执行 `stamp head`。
+
+前端默认连接 `http://127.0.0.1:8000`，可通过 `VITE_API_BASE_URL` 修改：
 
 ```bash
 cd frontend
@@ -30,42 +29,44 @@ npm install
 npm run dev
 ```
 
-## 数据库初始化
+API 文档：`http://127.0.0.1:8000/docs`。
 
-项目里有 2 个初始化 SQL 文件：
+## Docker 开发环境
 
-- `core/init_database.sql`：普通聊天系统数据
-- `core/init_ai_database.sql`：AI 聊天历史数据库
-
-### MySQL
-
-先登录 MySQL，再执
-```sql
-SOURCE ~/Login and chat rooms/core/init_database.sql;
-```
-
-如果你在 Windows 终端里，也可以用反斜杠：
-
-```sql
-SOURCE ~\\Login and chat rooms\\core\\init_database.sql;
-```
-
-### PostgreSQL
-
-执行 AI 数据库脚本：
+先配置 `backend/.env` 中的门禁与 JWT 密钥，再在仓库根目录运行：
 
 ```bash
-psql -U postgres -f "~/Login and chat rooms/core/init_ai_database.sql"
+docker compose up --build
 ```
 
-如果已经进入 `psql` 交互界面，也可以直接执行：
+Compose 只启动 MySQL、后端和前端。MySQL 地址在容器内被覆盖为 `mysql:3306`，宿主机端口为 `3307`。后端启动前自动应用普通业务迁移。
 
-```sql
-\i '~/Login and chat rooms/core/init_ai_database.sql'
+此配置使用开发服务器和热重载，正式部署需要另行配置。停止服务可运行 `docker compose down`；保留 `mysql_data` 数据卷以保留业务数据。
+
+## 验证
+
+后端测试需要额外安装 pytest：
+
+```bash
+cd backend
+python -m pip install pytest
+python -m pytest
 ```
-## 说明
 
-- 实时聊天主要通过 Socket.IO 实现
-- AI 聊天使用流式输出
-- 本地配置以 `.env` 为准，按仓库里的示例文件填写即可
-- 个人的 review 链接 ：[review-Link](https://fcn5hb1vp409.feishu.cn/wiki/PML1wKbW3iNUr1k1WeVc1mVhnP5?from=from_copylink)
+```bash
+cd frontend
+npm run build
+npm run lint
+npm run test:chat-room-lifecycle
+npm run test:friend-private-chat
+npm run test:github-issues-api
+```
+
+## 主要边界
+
+- `backend/main.py`：统一进程入口。
+- `backend/app_factory.py`：FastAPI、CORS、路由和 Socket.IO ASGI 装配。
+- `backend/common/`：认证和 MySQL 数据库依赖。
+- `backend/normal_system/`：用户、房间、消息、好友、帖子和实时通信。
+- `frontend/src/api/`：HTTP API；`frontend/src/services/socket/`：Socket 单例。
+- 页面组合 UI，hook 管理状态与连接生命周期。

@@ -25,7 +25,6 @@ const MessageBoardIssueDetail = lazy(() => import('../pages/subPage/MessageBoard
 const PostsFeed = lazy(() => import('../pages/subPage/PostsFeed'))
 const PostDetail = lazy(() => import('../pages/subPage/PostDetail'))
 const ChatRoom = lazy(() => import('../pages/room/ChatRoom'))
-const AIChat = lazy(() => import('../pages/room/AIChat'))
 const PrivateChat = lazy(() => import('../pages/room/PrivateChat'))
 const NotFound = lazy(() => import('../pages/NotFound'))
 
@@ -64,14 +63,6 @@ export const router = createBrowserRouter([
             element: (
               <RequireAuth>
                 <ChatRoom />
-              </RequireAuth>
-            ),
-          },
-          {
-            path: 'ai-chat',
-            element: (
-              <RequireAuth>
-                <AIChat />
               </RequireAuth>
             ),
           },

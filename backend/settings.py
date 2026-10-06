@@ -42,10 +42,6 @@ OPENAPI_TAGS = [
         "description": "消息 HTTP 辅助接口（前缀 `/api/messages`）；实时收发以 Socket.IO 为准。",
     },
     {
-        "name": "ai",
-        "description": "AI 聊天（SSE 流式返回，前缀 `/api/ai`）。",
-    },
-    {
         "name": "gate",
         "description": "验证是否有正确输入密码 (前缀`/api/gate`)",
     },

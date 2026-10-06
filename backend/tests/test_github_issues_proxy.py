@@ -14,13 +14,12 @@ class GitHubIssuesProxyTest(unittest.IsolatedAsyncioTestCase):
           os.environ,
           {
               "DATABASE_URL": "mysql+aiomysql://user:pass@localhost:3306/chat_rooms",
-              "AI_DATABASE_URL": "postgresql+asyncpg://user:pass@localhost:5432/ai_chat",
               "CHAT_JWT_SECRET": "secret",
               "CHAT_GATE_PASSWORD": "gate",
           },
       ):
           sys.modules.pop("main", None)
-          main = importlib.import_module("main")
+          main = importlib.import_module("app_factory")
 
       routes = {
           (route.path, method)

@@ -5,10 +5,9 @@
 
 ## 项目定位
 
-本仓库是一个登录 + 聊天室系统，分成两条独立业务线：
+本仓库是一个登录 + 聊天室系统，包含群聊、好友私聊和帖子，使用 FastAPI + Socket.IO + React，业务数据只存储在 MySQL。
 
-1. 普通聊天室：FastAPI + Socket.IO + React。
-2. AI 聊天：独立的 `backend/ai/` 域，走 HTTP SSE 流式输出。
+后续围绕消息可靠存储、缓存、Kafka、并发和分布式投递逐阶段演进；这些能力尚未全部实现。
 
 ## 架构决策
 
@@ -17,7 +16,6 @@
 - JWT 是 HTTP API 和 Socket.IO 的共同身份层。
 - 普通聊天室的 CRUD 在 `backend/normal_system/routers/room.py` 和 `message.py`。
 - 普通聊天室实时事件只走 `backend/normal_system/routers/socket.py`。
-- AI 聊天入口只走 `backend/ai/routers/turn.py`。
 - 前端 HTTP 封装在 `frontend/src/api/`，Socket 单例在 `frontend/src/services/socket/`。
 - 页面尽量只组装 UI，状态和协议细节放在 hook、api、service 层。
 
@@ -25,11 +23,9 @@
 
 - `backend/common/`：通用认证、数据库依赖。
 - `backend/normal_system/`：普通用户、房间、消息、Socket 实时层。
-- `backend/ai/`：AI 路由、编排、存储、历史、流式输出。
 - `frontend/src/api/client.ts`：Axios 实例、Bearer token、401 处理。
 - `frontend/src/contexts/AuthContext.tsx`：登录态、token、本地存储、Socket 连接生命周期。
 - `frontend/src/hooks/useRoomChat.ts`：普通聊天室状态机。
-- `frontend/src/hooks/useAIchat.ts`：AI 历史、SSE 流、取消请求。
 - `frontend/src/routers/index.tsx`：React Router 路由和登录守卫。
 
 ## 行为准则
@@ -76,14 +72,14 @@
 - API 请求参数、响应字段、错误码发生变化。
 - Socket.IO 事件名或 payload 结构发生变化。
 - JWT、gate、登录态、房间权限、消息归属逻辑发生变化。
-- 普通聊天室和 AI 聊天边界可能被合并或重划。
+- `backend/common/` 与 `normal_system/` 的职责边界发生变化，或引入新的存储、消息中间件和服务进程。
 - 数据库 schema、迁移、初始化逻辑发生变化。
 - 任务有 2 种以上合理产品解释。
 
 ## 完成自检
 
 - [ ] diff 中没有无关格式化、重命名或顺手重构。
-- [ ] 改动仍符合 `backend/common`、`normal_system`、`ai` 的域边界。
+- [ ] 改动仍符合 `backend/common` 与 `normal_system` 的职责边界。
 - [ ] 前端页面没有直接绕过 `api`、`hook`、`socketManager` 去写协议细节。
 - [ ] 协议变更已同步后端 router/socket、前端 `types`、api/service/hook。
 - [ ] 认证、权限、房间存在性、消息归属检查没有被绕过。
@@ -112,7 +108,7 @@ npm run lint
 ```bash
 cd frontend
 npm run test:chat-room-lifecycle
-npm run test:ai-chat-ui
+npm run test:friend-private-chat
 ```
 
 ## Git / Commit 规范

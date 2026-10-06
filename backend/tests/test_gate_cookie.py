@@ -116,7 +116,6 @@ def run_async(coro):
 def gate_test_environment(include_gate_cookie_secret=True):
     values = {
         "DATABASE_URL": "mysql+aiomysql://user:pass@localhost:3306/chat_rooms",
-        "AI_DATABASE_URL": "postgresql+asyncpg://user:pass@localhost:5432/ai_chat",
         "CHAT_JWT_SECRET": "jwt-secret-with-at-least-32-bytes",
         "CHAT_GATE_PASSWORD": "gate",
         "USERNAME": "test-user",

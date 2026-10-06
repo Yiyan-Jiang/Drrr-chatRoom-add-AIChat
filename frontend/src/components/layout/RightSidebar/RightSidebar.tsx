@@ -5,23 +5,9 @@ import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { friendsApi } from '@/api/friends'
 import { resolveChatAvatarAssets } from '@/assets/chatAvatarCatalog'
-import type { AICharacter } from '@/types/ai'
 import type { Friend } from '@/types/friends'
 import { logger } from '@/utils/logger'
 import { getUserDisplayName } from '@/utils/userDisplayName'
-
-type AICharacterItem = {
-  id: AICharacter
-  label: string
-  avatarKey: string
-}
-
-const AI_CHARACTERS: AICharacterItem[] = [
-  { id: 'sakura', label: '小樱', avatarKey: 'pink' },
-  { id: 'rin', label: '凛', avatarKey: 'gray' },
-  { id: 'mio', label: '澪', avatarKey: 'zaika' },
-  { id: 'yang', label: '葵', avatarKey: 'kanra' },
-]
 
 export default function RightSidebar() {
   const pageSize = 8
@@ -70,24 +56,6 @@ export default function RightSidebar() {
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="grid auto-rows-[90px] grid-cols-3 lg:grid-cols-4">
-          {AI_CHARACTERS.map((char) => {
-            const assets = resolveChatAvatarAssets(char.avatarKey)
-
-            return (
-              <Link
-                key={char.id}
-                to={`/ai-chat?char=${char.id}`}
-                className="flex h-[90px] flex-col items-center justify-start bg-transparent py-2 transition hover:scale-105"
-              >
-                <img
-                  src={assets.avatar}
-                  alt={char.label}
-                  className="mb-0.5 h-14 w-14 shrink-0 object-cover"
-                />
-                <span className="max-w-14 truncate text-xs font-medium leading-4 text-gray-300">{char.label}</span>
-              </Link>
-            )
-          })}
           {friends.map((friend) => {
             const assets = resolveChatAvatarAssets(friend.user.avatar_key)
             const label = getUserDisplayName(friend.user)

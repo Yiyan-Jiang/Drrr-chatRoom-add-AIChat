@@ -28,12 +28,6 @@ class Phase5ImportBoundaryTest(unittest.TestCase):
         self.assertNotIn("from ai.", normal_system)
         self.assertNotIn("import ai.", normal_system)
 
-    def test_ai_does_not_import_normal_system_business_layers(self):
-        ai = self._read_package("ai")
-
-        self.assertNotIn("from normal_system.repositories", ai)
-        self.assertNotIn("from normal_system.services", ai)
-        self.assertNotIn("from normal_system.models", ai)
 
 
 if __name__ == "__main__":

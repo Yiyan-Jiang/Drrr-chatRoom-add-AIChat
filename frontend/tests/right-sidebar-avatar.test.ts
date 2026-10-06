@@ -11,9 +11,11 @@ const rightSidebarSource = readFileSync(
   'utf8',
 )
 
-test('RightSidebar resolves AI character avatar assets instead of rendering a placeholder', () => {
+test('RightSidebar resolves friend avatars and private chat links', () => {
   assert.match(rightSidebarSource, /resolveChatAvatarAssets/)
-  assert.match(rightSidebarSource, /avatarKey/)
+  assert.match(rightSidebarSource, /friend\.user\.avatar_key/)
+  assert.match(rightSidebarSource, /\/private-chat\/\$\{friend\.user\.id\}/)
   assert.match(rightSidebarSource, /<img[^>]+src=/)
   assert.doesNotMatch(rightSidebarSource, /\n\s*1\n/)
+  assert.doesNotMatch(rightSidebarSource, /\/ai-chat|AI_CHARACTERS/)
 })

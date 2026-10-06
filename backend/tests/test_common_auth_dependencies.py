@@ -77,7 +77,6 @@ class CommonAuthDependenciesTest(unittest.TestCase):
             os.path.join(root, "normal_system", "routers", "auth.py"),
             os.path.join(root, "normal_system", "routers", "message.py"),
             os.path.join(root, "normal_system", "routers", "room.py"),
-            os.path.join(root, "ai", "routers", "chat.py"),
         ]
 
         contents = []
