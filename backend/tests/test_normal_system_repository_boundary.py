@@ -4,24 +4,24 @@ from unittest.mock import patch
 
 
 class NormalSystemRepositoryBoundaryTest(unittest.TestCase):
-    def test_normal_system_repositories_exports_existing_api(self):
+    def test_normal_system_repositories_exposes_queries_and_concrete_persistence_primitives(self):
         with patch.dict(
             "os.environ",
             {"DATABASE_URL": "mysql+aiomysql://user:pass@localhost:3306/chat_rooms"},
         ):
             from normal_system.repositories import (
-                create_message,
-                create_room,
-                create_user,
                 get_room_by_id,
                 get_user_by_id,
                 serialize_message,
             )
+            from normal_system.repositories.message import add_message
+            from normal_system.repositories.room import add_room
+            from normal_system.repositories.user import add_user
 
         exported = {
-            create_message,
-            create_room,
-            create_user,
+            add_message,
+            add_room,
+            add_user,
             get_room_by_id,
             get_user_by_id,
             serialize_message,

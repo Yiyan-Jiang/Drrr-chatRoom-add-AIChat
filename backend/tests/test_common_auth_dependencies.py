@@ -85,7 +85,11 @@ class CommonAuthDependenciesTest(unittest.TestCase):
                 contents.append(file.read())
         joined = "\n".join(contents)
 
-        self.assertIn("from common.auth import create_access_token", joined)
+        auth_service = os.path.join(root, "normal_system", "services", "auth.py")
+        with open(auth_service, encoding="utf-8") as file:
+            service_source = file.read()
+        self.assertIn("from common.auth import create_access_token", service_source)
+        self.assertIn("from normal_system.services.auth import login_user", joined)
         self.assertIn("from common.dependencies import get_current_user_id", joined)
         self.assertNotIn("from auth_token import", joined)
         self.assertNotIn("from dependencies import", joined)

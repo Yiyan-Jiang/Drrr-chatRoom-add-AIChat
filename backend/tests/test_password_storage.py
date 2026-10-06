@@ -11,7 +11,8 @@ from fastapi.testclient import TestClient
 os.environ.setdefault("DATABASE_URL", "mysql+aiomysql://user:pass@localhost:3306/chat_rooms")
 
 from common.dependencies import require_gate_passed
-from normal_system.repositories import create_user
+from normal_system.services.user import create_user
+from normal_system.services import auth as auth_service
 from normal_system.routers import auth as auth_router
 from normal_system.schemas import UserCreate
 
@@ -45,10 +46,14 @@ def login_with_hash(stored_hash, password):
     app.include_router(auth_router.router)
     app.dependency_overrides[auth_router.get_db] = lambda: db
     app.dependency_overrides[require_gate_passed] = lambda: None
-    with patch.object(auth_router, "get_user_by_username", AsyncMock(return_value=user)), patch.object(
-        auth_router, "create_access_token", return_value=("test-token", 3600)
-    ):
+    with patch.object(auth_service, "get_user_by_username", AsyncMock(return_value=user)), patch.object(
+        auth_service, "create_access_token", return_value=("test-token", 3600)
+    ) as create_token:
         response = TestClient(app).post("/auth/login", json={"username": "alice", "password": password})
+        if response.status_code == 401:
+            create_token.assert_not_called()
+        else:
+            create_token.assert_called_once_with(user.id)
     return response, user, db
 
 

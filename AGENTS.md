@@ -14,8 +14,9 @@
 - 后端单进程启动，统一入口是 `backend/main.py`。
 - `backend/app_factory.py` 负责装配 FastAPI、CORS、路由和 Socket.IO ASGI 包装。
 - JWT 是 HTTP API 和 Socket.IO 的共同身份层。
-- 普通聊天室的 CRUD 在 `backend/normal_system/routers/room.py` 和 `message.py`。
-- 普通聊天室实时事件只走 `backend/normal_system/routers/socket.py`。
+- HTTP 协议入口保留在 `backend/normal_system/routers/`；业务规则和写事务放在 `services/`，数据库访问放在具体 `repositories/` 文件。
+- Socket.IO 事件统一通过 `backend/normal_system/routers/socket.py` 注册，处理实现在 `realtime/`，HTTP 路由不要导入 Socket 路由。
+- HTTP 复用 `common.normal_database.get_db`，Socket 每个事件独立创建 session；只有 service 管理写入提交与回滚。
 - 前端 HTTP 封装在 `frontend/src/api/`，Socket 单例在 `frontend/src/services/socket/`。
 - 页面尽量只组装 UI，状态和协议细节放在 hook、api、service 层。
 
@@ -23,6 +24,10 @@
 
 - `backend/common/`：通用认证、数据库依赖。
 - `backend/normal_system/`：普通用户、房间、消息、Socket 实时层。
+- `backend/normal_system/services/`：业务规则、用例编排、事务；纯查询无需增加转发 service。
+- `backend/normal_system/repositories/`：SQL 与持久化操作；`__init__.py` 仅导出，不放业务实现。
+- `backend/normal_system/realtime/`：Socket 实例、连接、群聊/私聊 handler 和 publisher；在线状态沿用 `services/room_presence.py`。
+- `backend/normal_system/integrations/`：外部服务客户端及现有缓存，不依赖 HTTP 路由。
 - `frontend/src/api/client.ts`：Axios 实例、Bearer token、401 处理。
 - `frontend/src/contexts/AuthContext.tsx`：登录态、token、本地存储、Socket 连接生命周期。
 - `frontend/src/hooks/useRoomChat.ts`：普通聊天室状态机。

@@ -25,6 +25,10 @@
 - `backend/app_factory.py` - 创建 FastAPI 应用、配置 CORS、挂载业务路由。
 - `backend/common/` - JWT、认证依赖、普通数据库连接。
 - `backend/normal_system/` - 普通用户、房间、消息、Socket.IO 实时层。
+- `backend/normal_system/services/` - 业务规则、用例编排、写事务。
+- `backend/normal_system/repositories/` - 按业务拆分的数据库访问。
+- `backend/normal_system/realtime/` - Socket 实例、handler 和事件发送。
+- `backend/normal_system/integrations/` - GitHub 等外部客户端及现有缓存。
 - `frontend/src/api/` - Axios API 封装，统一处理 token 和 401。
 - `frontend/src/services/socket/` - 全局 Socket.IO 单例和事件绑定。
 - `frontend/src/contexts/AuthContext.tsx` - 登录态、本地 token、Socket 连接生命周期。
@@ -76,9 +80,12 @@
 
 ### 3.2 普通聊天室域
 
-- REST CRUD 放在 `backend/normal_system/routers/`。
-- Socket 实时事件放在 `backend/normal_system/routers/socket.py`。
-- 数据库访问通过 `normal_system.repositories`，不要在 router 里手写复杂 SQL。
+- REST 协议入口放在 `backend/normal_system/routers/`，写业务调用对应 service，纯查询可直接使用 repository。
+- Socket 事件通过 `backend/normal_system/routers/socket.py` 统一注册，处理实现在 `realtime/connection.py`、`room_chat.py` 和 `private_chat.py`。
+- 数据库访问通过具体 `normal_system.repositories` 模块，repository 不提交事务、不处理 HTTP 或 Socket 协议。
+- service 管理业务规则、提交与回滚；保留唯一键冲突后的回滚和重放行为。
+- HTTP 统一使用 `common.normal_database.get_db`；Socket 每个事件使用独立 session，不共享 AsyncSession。
+- Socket 实例和广播能力由 `realtime/server.py`、`publisher.py` 提供，HTTP 路由不引用 Socket 路由。
 - 在线成员状态使用 `RoomPresence`，不要在前端伪造在线人数。
 
 
@@ -182,7 +189,7 @@
 
 ### 新 HTTP API
 
-1. 后端先放进对应 router 和 schema/repository。
+1. 后端先定义对应 schema，业务规则放 service，SQL 放 repository，router 只处理协议与错误映射。
 2. 通过 `app_factory.py` 已挂载的 router 暴露。
 3. 前端在 `frontend/src/api/` 增加封装。
 4. 涉及响应结构时同步 `frontend/src/types/chat.ts` 或新增类型文件。
@@ -190,7 +197,7 @@
 
 ### 新 Socket.IO 事件
 
-1. 后端在 `normal_system/routers/socket.py` 增加事件处理。
+1. 后端在 `normal_system/realtime/` 对应 handler 增加处理，通过 `routers/socket.py` 注册。
 2. 前端在 `socketManager.ts` 增加 emit/on/off 封装。
 3. 使用方放在 hook 内，不直接写到页面组件。
 4. 同步更新类型和生命周期清理逻辑。

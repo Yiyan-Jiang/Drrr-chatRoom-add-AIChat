@@ -35,12 +35,20 @@ class NormalSystemRouterBoundaryTest(unittest.TestCase):
 
         self.assertFalse((root / "routers" / "__init__.py").exists())
 
-    def test_room_router_uses_normal_system_socket_module(self):
+    def test_room_router_uses_shared_presence_and_publisher_without_socket_registration(self):
         root = Path(__file__).resolve().parents[1]
         room_router = (root / "normal_system" / "routers" / "room.py").read_text(encoding="utf-8")
 
-        self.assertIn("normal_system.routers.socket", room_router)
+        self.assertIn("normal_system.realtime.server", room_router)
+        self.assertIn("normal_system.realtime.publisher", room_router)
+        self.assertNotIn("normal_system.routers.socket", room_router)
         self.assertNotIn("from routers.socket import", room_router)
+
+        from normal_system.routers import room
+        from normal_system.realtime import publisher, server
+
+        self.assertIs(room.room_presence, server.room_presence)
+        self.assertIs(room.emit_room_deleted, publisher.emit_room_deleted)
 
 
 if __name__ == "__main__":

@@ -68,5 +68,10 @@ npm run test:github-issues-api
 - `backend/app_factory.py`：FastAPI、CORS、路由和 Socket.IO ASGI 装配。
 - `backend/common/`：认证和 MySQL 数据库依赖。
 - `backend/normal_system/`：用户、房间、消息、好友、帖子和实时通信。
+- `normal_system/routers/`：HTTP 协议入口及 Socket 事件注册；现有外部路径保持不变。
+- `normal_system/services/`：业务规则及写事务；`repositories/`：具体数据库访问。
+- `normal_system/realtime/`：Socket 实例、连接、群聊/私聊处理和广播；HTTP 与 Socket 共用业务逻辑。
+- `normal_system/integrations/`：外部客户端及现有缓存，GitHub HTTP 路由保持轻量。
+- HTTP 统一使用数据库依赖，每个 Socket 事件独立创建 session，退出时释放连接池。
 - `frontend/src/api/`：HTTP API；`frontend/src/services/socket/`：Socket 单例。
 - 页面组合 UI，hook 管理状态与连接生命周期。

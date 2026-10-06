@@ -10,8 +10,8 @@ os.environ.setdefault("DATABASE_URL", "mysql+aiomysql://user:pass@localhost:3306
 
 from common.normal_database import Login
 from normal_system.models import Friendship, Message, PrivateMessage, Room, User
-from normal_system.repositories import create_message
-from normal_system.repositories.friend import create_private_message
+from normal_system.services.message import create_message
+from normal_system.services.private_message import create_private_message
 from normal_system.schemas import MessageCreate
 
 
@@ -79,8 +79,8 @@ def test_unique_key_race_recovers_only_messages_in_the_same_scope(private, colli
         db.commit.side_effect = IntegrityError("insert", {}, Exception("duplicate"))
         if private:
             existing = PrivateMessage(id=7, sender_id=2 if collision else 1, recipient_id=3, content="original", client_message_id="key")
-            with patch("normal_system.repositories.friend.get_friendship", AsyncMock(return_value=object())), patch(
-                "normal_system.repositories.friend.get_private_message_by_client_message_id", AsyncMock(side_effect=[None, existing])
+            with patch("normal_system.services.private_message.get_friendship", AsyncMock(return_value=object())), patch(
+                "normal_system.services.private_message.get_private_message_by_client_message_id", AsyncMock(side_effect=[None, existing])
             ):
                 if collision:
                     with pytest.raises(ValueError, match="client_message_id"):
@@ -89,8 +89,8 @@ def test_unique_key_race_recovers_only_messages_in_the_same_scope(private, colli
                     assert await create_private_message(db, 1, 3, "retry", "key") is existing
         else:
             existing = Message(id=7, user_id=2 if collision else 1, room_id=3, message_type="user", content="original", client_message_id="key")
-            with patch("normal_system.repositories.get_room_by_id", AsyncMock(return_value=object())), patch(
-                "normal_system.repositories.get_message_by_client_message_id", AsyncMock(side_effect=[None, existing])
+            with patch("normal_system.services.message.get_room_by_id", AsyncMock(return_value=object())), patch(
+                "normal_system.services.message.get_message_by_client_message_id", AsyncMock(side_effect=[None, existing])
             ):
                 payload = MessageCreate(content="retry", room_id=3, client_message_id="key")
                 if collision:

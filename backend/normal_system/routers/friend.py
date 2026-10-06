@@ -2,17 +2,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.dependencies import get_current_user_id
-from common.normal_database import async_session
-from normal_system.repositories.friend import (
+from common.normal_database import get_db
+from normal_system.services.friend import (
     accept_friend_request,
     cancel_friend_request,
     create_friend_request,
     delete_friendship,
-    list_friend_requests,
-    list_friends,
-    list_private_messages,
     reject_friend_request,
 )
+from normal_system.repositories.friend import list_friend_requests, list_friends
+from normal_system.repositories.private_message import list_private_messages
 from normal_system.schemas import (
     FriendRequestCreate,
     FriendRequestInDB,
@@ -23,11 +22,6 @@ from normal_system.schemas import (
 
 router = APIRouter(prefix="/friends", tags=["friends"])
 private_message_router = APIRouter(prefix="/private-messages", tags=["private-messages"])
-
-
-async def get_db():
-    async with async_session() as session:
-        yield session
 
 
 @router.get("/", response_model=PaginatedFriendsResponse)

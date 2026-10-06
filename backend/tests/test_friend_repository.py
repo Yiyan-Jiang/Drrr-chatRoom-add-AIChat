@@ -9,16 +9,14 @@ os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 from common.normal_database import Login
 from normal_system.models import User
-from normal_system.repositories.friend import (
+from normal_system.services.friend import (
     accept_friend_request,
     create_friend_request,
-    create_private_message,
     delete_friendship,
-    get_friendship,
-    list_friend_requests,
-    list_friends,
-    list_private_messages,
 )
+from normal_system.services.private_message import create_private_message
+from normal_system.repositories.friend import get_friendship, list_friend_requests, list_friends
+from normal_system.repositories.private_message import list_private_messages
 
 
 async def run_with_session(scenario):
