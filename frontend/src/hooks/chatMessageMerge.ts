@@ -1,6 +1,6 @@
 import type { Message } from '@/types/chat'
 
-const MAX_LOADED_MESSAGES = 300
+export const MAX_LOADED_MESSAGES = 300
 
 function normalizeMessage(message: Message): Message {
   return {
@@ -30,14 +30,20 @@ export function mergeMessages(existing: Message[], incoming: Message[], mode: 'h
           : undefined
 
     if (existingIndex !== undefined) {
-      merged[existingIndex] = {
-        ...merged[existingIndex],
+      const target = existingIndex < merged.length ? merged : append
+      const index = existingIndex < merged.length ? existingIndex : existingIndex - merged.length
+      target[index] = {
+        ...target[index],
         ...message,
         delivery_status: message.delivery_status ?? 'sent',
       }
+      if (message.id > 0) byId.set(message.id, existingIndex)
       continue
     }
 
+    const index = merged.length + append.length
+    if (message.id > 0) byId.set(message.id, index)
+    if (message.client_message_id) byClientId.set(message.client_message_id, index)
     append.push(message)
   }
 

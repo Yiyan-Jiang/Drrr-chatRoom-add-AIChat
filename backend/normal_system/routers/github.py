@@ -112,6 +112,12 @@ async def _get_json_from_github(url: str, params: dict[str, Any] | None = None) 
             )
             response.raise_for_status()
     except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == status.HTTP_401_UNAUTHORIZED:
+            # Upstream credentials are unrelated to the user's local JWT session.
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="GitHub authentication failed. Check the server GITHUB_TOKEN configuration.",
+            ) from exc
         if exc.response.status_code == status.HTTP_403_FORBIDDEN:
             detail = "GitHub API request limit reached. Please try again later."
         elif exc.response.status_code == status.HTTP_404_NOT_FOUND:

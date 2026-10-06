@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
 from normal_system.models import FriendRequest, Friendship, PrivateMessage, User
 from normal_system.schemas.friend import (
@@ -235,6 +236,8 @@ async def create_private_message(
     if client_message_id:
         existing = await get_private_message_by_client_message_id(db, client_message_id)
         if existing:
+            if existing.sender_id != sender_id or existing.recipient_id != recipient_id:
+                raise ValueError("client_message_id belongs to another conversation")
             return existing
 
     message = PrivateMessage(
@@ -245,9 +248,19 @@ async def create_private_message(
         created_at=datetime.now(),
     )
     db.add(message)
-    await db.commit()
-    await db.refresh(message)
-    return message
+    try:
+        await db.commit()
+        await db.refresh(message)
+        return message
+    except IntegrityError:
+        await db.rollback()
+        if client_message_id:
+            existing = await get_private_message_by_client_message_id(db, client_message_id)
+            if existing:
+                if existing.sender_id != sender_id or existing.recipient_id != recipient_id:
+                    raise ValueError("client_message_id belongs to another conversation")
+                return existing
+        raise
 
 
 async def list_private_messages(

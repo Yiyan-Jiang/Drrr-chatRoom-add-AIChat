@@ -6,9 +6,43 @@ from importlib import import_module
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.routing import APIRoute
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+import httpx
 
 
 class GitHubIssuesProxyTest(unittest.IsolatedAsyncioTestCase):
+    def test_github_bad_credentials_are_not_returned_as_local_auth_failure(self):
+        with patch.dict(os.environ, {
+            "DATABASE_URL": "mysql+aiomysql://user:pass@localhost:3306/chat_rooms",
+            "CHAT_JWT_SECRET": "secret",
+            "CHAT_GATE_PASSWORD": "gate",
+        }):
+            from normal_system.routers import github
+
+        response = httpx.Response(
+            401,
+            json={"message": "Bad credentials"},
+            request=httpx.Request("GET", "https://api.github.com/repos/example/repo/issues"),
+        )
+        upstream = AsyncMock()
+        upstream.__aenter__.return_value.get.return_value = response
+        app = FastAPI()
+        app.include_router(github.router, prefix="/api")
+
+        with patch.object(github, "_github_cache", {}), patch.object(
+            github.httpx, "AsyncClient", return_value=upstream
+        ):
+            for path in (
+                "/api/github/issues",
+                "/api/github/issues/7",
+                "/api/github/issues/7/comments",
+            ):
+                with self.subTest(path=path):
+                    result = TestClient(app).get(path)
+                    self.assertEqual(result.status_code, 502)
+                    self.assertIn("GitHub", result.json()["detail"])
+
     def test_main_mounts_github_issues_proxy_route(self):
       with patch.dict(
           os.environ,

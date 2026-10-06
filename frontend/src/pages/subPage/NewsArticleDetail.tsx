@@ -25,6 +25,10 @@ function formatDate(value: string): string {
 
 export default function NewsArticleDetail() {
   const { slug } = useParams()
+  return <NewsArticleContent key={slug} slug={slug} />
+}
+
+function NewsArticleContent({ slug }: { slug: string | undefined }) {
   const [document, setDocument] = useState<NewsDocument | null>(null)
   const [adjacent, setAdjacent] = useState<AdjacentNewsDocuments>({
     previous: null,
@@ -35,11 +39,6 @@ export default function NewsArticleDetail() {
 
   useEffect(() => {
     let isCurrent = true
-
-    setIsMobileTocOpen(false)
-    setLoadState('loading')
-    setDocument(null)
-    setAdjacent({ previous: null, next: null })
 
     getNewsDocumentBySlug(slug).then(
       (nextDocument) => {

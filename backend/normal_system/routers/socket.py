@@ -314,6 +314,9 @@ async def send_private_message(sid: str, data: dict):
         except PermissionError:
             await sio.emit("private_chat_error", {"message": "Only friends can send private messages"}, to=sid)
             return
+        except ValueError as exc:
+            await sio.emit("private_chat_error", {"message": str(exc)}, to=sid)
+            return
         sender = await get_user_by_id(db, db_message.sender_id)
         if not sender:
             await sio.emit("private_chat_error", {"message": "Sender not found"}, to=sid)

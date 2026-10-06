@@ -107,8 +107,9 @@ test('news article detail page and route are wired to static Markdown documents'
   assert.match(rendererSource, /group-hover:opacity-100/)
   assert.match(rendererSource, /getTextContent/)
   assert.match(rendererSource, /inline-code/)
-  assert.match(rendererSource, /data-line/)
-  assert.match(rendererSource, /data-highlighted-line/)
+  const selectorSource = readFileSync(resolve(process.cwd(), 'src/features/news/prettyCodeSelectors.ts'), 'utf8')
+  assert.match(selectorSource, /data-line/)
+  assert.match(selectorSource, /data-highlighted-line/)
 
   assert.match(newsAnchorSource, /scrollToHeadingById/)
   assert.match(newsAnchorSource, /requestAnimationFrame/)

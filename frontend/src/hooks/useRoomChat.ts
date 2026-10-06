@@ -8,6 +8,7 @@ import type { Message, PaginatedMessagesResponse, RoomMember, RoomWithMessages, 
 import type { User } from '@/types/user'
 import { logger } from '@/utils/logger'
 import { createOptimisticMessage, mergeMessages } from './chatMessageMerge'
+import { mergeRecoveredHistory, recoverChatHistory } from './chatHistory'
 
 type ChatError = { kind: 'not_found' | 'forbidden' | 'network' | 'unknown'; message: string }
 
@@ -34,6 +35,8 @@ type RoomChatAction =
   | { type: 'MESSAGES_INITIAL_SUCCESS'; page: PaginatedMessagesResponse }
   | { type: 'MESSAGES_OLDER_START' }
   | { type: 'MESSAGES_OLDER_SUCCESS'; page: PaginatedMessagesResponse }
+  | { type: 'MESSAGES_OLDER_FAILURE' }
+  | { type: 'MESSAGES_RECOVERED'; page: PaginatedMessagesResponse }
   | { type: 'OPTIMISTIC_MESSAGE_ADDED'; message: Message }
   | { type: 'MESSAGE_ACK'; message: Message }
   | { type: 'NEW_MESSAGE_RECEIVED'; message: Message; isNearHead: boolean }
@@ -79,12 +82,16 @@ function reducer(state: RoomChatState, action: RoomChatAction): RoomChatState {
     case 'MESSAGES_INITIAL_SUCCESS':
       return {
         ...state,
-        messages: mergeMessages([], action.page.items, 'head'),
+        messages: mergeMessages(state.messages, action.page.items, 'head'),
         hasMore: action.page.has_more,
         nextBeforeId: action.page.next_before_id,
       }
     case 'MESSAGES_OLDER_START':
       return { ...state, loadingOlder: true }
+    case 'MESSAGES_OLDER_FAILURE':
+      return { ...state, loadingOlder: false }
+    case 'MESSAGES_RECOVERED':
+      return { ...state, ...mergeRecoveredHistory(state, action.page) }
     case 'MESSAGES_OLDER_SUCCESS':
       return {
         ...state,
@@ -163,6 +170,7 @@ export function useRoomChat(roomId: number, user: User | null, isNearHead: () =>
   const [composerValue, setComposerValue] = useState('')
   const ackTimers = useRef(new Map<string, number>())
   const stateRef = useRef(state)
+  const requestScope = useRef({ cancelled: false, roomId })
 
   useEffect(() => {
     stateRef.current = state
@@ -177,29 +185,29 @@ export function useRoomChat(roomId: number, user: User | null, isNearHead: () =>
 
   const loadOlderMessages = useCallback(async () => {
     const current = stateRef.current
-    if (!roomId || current.loadingOlder || !current.hasMore) return
+    const scope = requestScope.current
+    if (scope.cancelled || scope.roomId !== roomId || !roomId || current.loadingOlder || !current.hasMore) return
     dispatch({ type: 'MESSAGES_OLDER_START' })
     try {
       const page = await messagesApi.getPageByRoom(roomId, {
         limit: 10,
         beforeId: current.nextBeforeId,
       })
+      if (scope.cancelled) return
       dispatch({ type: 'MESSAGES_OLDER_SUCCESS', page })
     } catch (error) {
+      if (scope.cancelled) return
       logger.error('[chat] history fetch failed', {
         message: error instanceof Error ? error.message : String(error),
       })
-      dispatch({ type: 'MESSAGES_OLDER_SUCCESS', page: { items: [], has_more: false, next_before_id: null } })
+      dispatch({ type: 'MESSAGES_OLDER_FAILURE' })
     }
-  }, [roomId])
-
-  const reloadLatestMessages = useCallback(async () => {
-    const page = await messagesApi.getPageByRoom(roomId, { limit: 10 })
-    dispatch({ type: 'MESSAGES_INITIAL_SUCCESS', page })
   }, [roomId])
 
   useEffect(() => {
     if (!roomId || Number.isNaN(roomId)) return
+    const scope = { cancelled: false, roomId }
+    requestScope.current = scope
     let cancelled = false
 
     async function loadInitial() {
@@ -219,17 +227,25 @@ export function useRoomChat(roomId: number, user: User | null, isNearHead: () =>
     loadInitial()
     return () => {
       cancelled = true
+      scope.cancelled = true
     }
   }, [roomId])
 
   useEffect(() => {
     if (!roomId || !user) return
+    let cancelled = false
+    let lastMessageId = Math.max(0, ...stateRef.current.messages.map((message) => message.id))
+    let recovering = false
+    let recoveryFailed = false
+    let recoveryGeneration = 0
 
     const handleAck = (message: Message) => {
+      if (message.room_id !== roomId) return
       clearAckTimer(message.client_message_id)
       dispatch({ type: 'MESSAGE_ACK', message })
     }
     const handleNewMessage = (message: Message) => {
+      if (message.room_id !== roomId) return
       const nearHead = isNearHead()
       dispatch({ type: 'NEW_MESSAGE_RECEIVED', message, isNearHead: nearHead })
       if (nearHead || message.user_id === user.id) {
@@ -243,15 +259,37 @@ export function useRoomChat(roomId: number, user: User | null, isNearHead: () =>
       if (data.room_id === roomId) dispatch({ type: 'ROOM_DELETED' })
     }
     const handleReconnect = () => {
+      const generation = ++recoveryGeneration
+      recovering = true
       dispatch({ type: 'RECONNECTING_CHANGED', reconnecting: false })
       socketManager.joinRoom(roomId)
-      reloadLatestMessages().catch((error) =>
+      recoverChatHistory(
+        (beforeId) => messagesApi.getPageByRoom(roomId, { limit: 30, beforeId }),
+        lastMessageId,
+        (page) => dispatch({ type: 'MESSAGES_RECOVERED', page }),
+        () => !cancelled && generation === recoveryGeneration,
+      ).then(() => {
+        if (cancelled || generation !== recoveryGeneration) return
+        recovering = false
+        recoveryFailed = false
+      }).catch((error) => {
+        if (cancelled || generation !== recoveryGeneration) return
+        recovering = false
+        recoveryFailed = true
         logger.error('[chat] reconnect history fetch failed', {
           message: error instanceof Error ? error.message : String(error),
-        }),
-      )
+        })
+      })
     }
-    const handleDisconnect = () => dispatch({ type: 'RECONNECTING_CHANGED', reconnecting: true })
+    const handleDisconnect = () => {
+      if (!recovering && !recoveryFailed) {
+        lastMessageId = Math.max(0, ...stateRef.current.messages.map((message) => message.id))
+      }
+      recoveryFailed = recoveryFailed || recovering
+      recovering = false
+      recoveryGeneration++
+      dispatch({ type: 'RECONNECTING_CHANGED', reconnecting: true })
+    }
 
     socketManager.joinRoom(roomId)
     socketManager.onMessageAck(handleAck)
@@ -263,6 +301,7 @@ export function useRoomChat(roomId: number, user: User | null, isNearHead: () =>
     const timers = ackTimers.current
 
     return () => {
+      cancelled = true
       socketManager.offMessageAck(handleAck)
       socketManager.offNewMessage(handleNewMessage)
       socketManager.offRoomMembers(handleMembers)
@@ -273,7 +312,7 @@ export function useRoomChat(roomId: number, user: User | null, isNearHead: () =>
       timers.forEach((timer) => window.clearTimeout(timer))
       timers.clear()
     }
-  }, [clearAckTimer, isNearHead, reloadLatestMessages, roomId, scrollToHead, user])
+  }, [clearAckTimer, isNearHead, roomId, scrollToHead, user])
 
   const sendMessage = useCallback(() => {
     if (!user || !composerValue.trim()) return

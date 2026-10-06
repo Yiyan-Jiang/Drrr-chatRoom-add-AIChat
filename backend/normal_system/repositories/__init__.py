@@ -5,6 +5,8 @@ from datetime import datetime
 import hashlib
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import delete, func
+from starlette.concurrency import run_in_threadpool
+from common.passwords import hash_password
 from normal_system.models import User, Message, Room
 from normal_system.schemas import (
     MessageInDB,
@@ -44,8 +46,7 @@ async def get_user_by_username(db: AsyncSession, username: str) -> Optional[User
 
 
 async def create_user(db: AsyncSession, user: UserCreate) -> User:
-    hashed_password = hashlib.sha256(user.password.encode()).hexdigest()
-    # 哈希加密密码
+    hashed_password = await run_in_threadpool(hash_password, user.password)
     db_user = User(
         username=user.username,
         password=hashed_password,
@@ -207,6 +208,8 @@ async def create_message(
     if message.client_message_id:
         existing = await get_message_by_client_message_id(db, message.client_message_id)
         if existing:
+            if existing.user_id != user_id or existing.room_id != message.room_id:
+                raise ValueError("client_message_id belongs to another conversation")
             return existing
 
     db_message = Message(
@@ -227,6 +230,8 @@ async def create_message(
         if message.client_message_id:
             existing = await get_message_by_client_message_id(db, message.client_message_id)
             if existing:
+                if existing.user_id != user_id or existing.room_id != message.room_id:
+                    raise ValueError("client_message_id belongs to another conversation")
                 return existing
         raise
 

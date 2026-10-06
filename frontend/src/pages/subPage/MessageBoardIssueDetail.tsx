@@ -47,35 +47,41 @@ function MarkdownBody({ body }: { body: string }) {
 
 export default function MessageBoardIssueDetail() {
   const { issueNumber } = useParams()
-  const parsedIssueNumber = Number(issueNumber)
+  return <IssueDetailContent key={issueNumber} parsedIssueNumber={Number(issueNumber)} />
+}
+
+function IssueDetailContent({ parsedIssueNumber }: { parsedIssueNumber: number }) {
+  const isValidIssueNumber = Number.isInteger(parsedIssueNumber) && parsedIssueNumber > 0
   const [issue, setIssue] = useState<MessageBoardIssue | null>(null)
   const [comments, setComments] = useState<MessageBoardIssueComment[]>([])
-  const [loadState, setLoadState] = useState<LoadState>('idle')
-  const [errorMessage, setErrorMessage] = useState('')
+  const [loadState, setLoadState] = useState<LoadState>(isValidIssueNumber ? 'loading' : 'error')
+  const [errorMessage, setErrorMessage] = useState(isValidIssueNumber ? '' : 'Issue 编号无效。')
 
-  const loadIssue = useCallback(async () => {
-    if (!Number.isInteger(parsedIssueNumber) || parsedIssueNumber <= 0) {
-      setLoadState('error')
-      setErrorMessage('Issue 编号无效。')
-      return
-    }
+  const loadIssue = useCallback(() => {
+    if (!Number.isInteger(parsedIssueNumber) || parsedIssueNumber <= 0) return
 
+    return Promise.all([
+      githubIssuesApi.get(parsedIssueNumber),
+      githubIssuesApi.listComments(parsedIssueNumber),
+    ]).then(
+      ([nextIssue, nextComments]) => {
+        setIssue(nextIssue)
+        setComments(nextComments)
+        setLoadState('success')
+      },
+      (error: unknown) => {
+        setErrorMessage(getErrorMessage(error))
+        setLoadState('error')
+      },
+    )
+  }, [parsedIssueNumber])
+
+  const refreshIssue = () => {
+    if (!isValidIssueNumber) return
     setLoadState('loading')
     setErrorMessage('')
-
-    try {
-      const [nextIssue, nextComments] = await Promise.all([
-        githubIssuesApi.get(parsedIssueNumber),
-        githubIssuesApi.listComments(parsedIssueNumber),
-      ])
-      setIssue(nextIssue)
-      setComments(nextComments)
-      setLoadState('success')
-    } catch (error) {
-      setErrorMessage(getErrorMessage(error))
-      setLoadState('error')
-    }
-  }, [parsedIssueNumber])
+    void loadIssue()
+  }
 
   useEffect(() => {
     void loadIssue()
@@ -133,7 +139,7 @@ export default function MessageBoardIssueDetail() {
           <button
             className="mt-4 rounded border border-red-200 px-3 py-1.5 text-sm text-red-700 transition hover:bg-red-100"
             type="button"
-            onClick={loadIssue}
+            onClick={refreshIssue}
           >
             重试
           </button>
