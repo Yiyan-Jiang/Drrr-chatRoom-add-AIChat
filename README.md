@@ -31,6 +31,29 @@ npm run dev
 
 API 文档：`http://127.0.0.1:8000/docs`。
 
+## 提交时自动格式化
+
+首次配置开发环境时，在仓库根目录安装提交工具和后端开发依赖，再安装前端依赖：
+
+```bash
+npm install
+python -m pip install -r backend/requirements-dev.txt
+npm --prefix frontend ci
+```
+
+根目录的 `npm install` 会通过 Husky 启用 Git 提交钩子。之后每次 `git commit`，lint-staged 只处理本次暂存的文件：前端 JS/TS 先由 Prettier 格式化，再运行 `eslint --fix`；前端 CSS/JSON/HTML 由 Prettier 格式化；后端 Python 由 `python -m ruff format` 格式化。格式化结果自动加入本次提交，部分暂存文件的未暂存修改会保留；任务失败会阻止提交。
+
+提交后端文件时，Git 使用的 Python 环境需要已安装 Ruff；使用虚拟环境时先激活它。Ruff 是开发依赖，生产环境继续安装 `backend/requirements.txt` 即可。
+
+需要手动格式化或检查排版时，在仓库根目录运行：
+
+```bash
+npm --prefix frontend run format
+npm --prefix frontend run format:check
+python -m ruff format backend
+python -m ruff format --check backend
+```
+
 ## Docker 开发环境
 
 先配置 `backend/.env` 中的门禁与 JWT 密钥，再在仓库根目录运行：

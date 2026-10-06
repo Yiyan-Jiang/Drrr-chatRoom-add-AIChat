@@ -1,7 +1,8 @@
 module.exports = {
-  'frontend/src/**/*.{js,jsx,ts,tsx}': (files) => {
-    const relativeFiles = files.map((file) => file.replace(/^frontend[\\/]/, ''))
-
-    return `npm --prefix frontend run lint:staged -- ${relativeFiles.join(' ')}`
-  },
+  'frontend/**/*.{js,jsx,ts,tsx}': [
+    'npm --prefix frontend run format:staged --',
+    'npm --prefix frontend run lint:staged --',
+  ],
+  'frontend/**/*.{css,json,html}': 'npm --prefix frontend run format:staged --',
+  'backend/**/*.py': 'python -m ruff format',
 }
