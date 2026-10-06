@@ -1,52 +1,22 @@
-## 普通聊天室库（MySQL）
+# MySQL 数据库说明
 
-先登录 MySQL：
-
-> mysql -u root -p
-
-
-然后
-```SQL
-SOURCE ~/Login and chat rooms/core/init_database.sql;
-```
-
-或者
-```SQL
-SOURCE ~\\Login and chat rooms\\core\\init_database.sql;
-```
-
-**注意的是应该将以上`~`绝对路径改成你自己的路径**
-
-## AI 聊天历史库（PostgreSQL）
-
-先确认 `core/init_ai_database.sql` 里的 `ai_user` 密码和 `backend/.env` 里的
-`AI_DATABASE_URL` 一致。
-
-### 方式一：在 PowerShell / CMD 里执行
-
-注意：下面这条命令是在系统终端里执行，不是在 `postgres=#` 这个 psql 交互窗口里执行。
+项目只使用 `chat_rooms` MySQL 数据库。普通业务的 Alembic 迁移是表结构演进的入口：
 
 ```bash
-psql -U postgres -f "~/Login and chat rooms/core/init_ai_database.sql"
+cd backend
+alembic -c normal_system/alembic.ini upgrade head
 ```
 
-或者：
+执行前先创建数据库与数据库用户，并在 `backend/.env` 配置 `DATABASE_URL`。当前迁移包括账号、房间、群聊消息、帖子、好友和私聊消息。
 
-```bash
-psql -U postgres -f "~\\Login and chat rooms\\core\\init_ai_database.sql"
-```
+## 历史 SQL 文件
 
-### 方式二：已经进入 psql 交互窗口时执行
+- `init_database.sql`：旧版用户、房间和消息初始化脚本，不包含全部后续功能表。
+- `chat_room_refactor_migration.sql`：旧版聊天室结构调整。
+- `add_room_display_metadata.sql`：旧版房间展示字段调整。
 
-如果你已经看到 `postgres=#`，不要再输入 `psql -U postgres -f ...`，而是执行：
+新建空数据库应使用 Alembic，不应把历史初始化 SQL 当作完整的当前 schema。
 
-```sql
-\i '~/Login and chat rooms/core/init_ai_database.sql'
-```
+已有旧版表时，先核对实际字段、索引和外键是否符合相应迁移，再建立正确的 Alembic 基线并升级。不要直接 `stamp head` 跳过尚未建立的功能表。
 
-如果提示符变成了 `postgres-#`，说明上一条 SQL 还没结束。可以先按 `Ctrl+C` 取消，
-或者输入 `\r` 清空当前输入缓冲区，再执行上面的 `\i` 命令。
-
-这个脚本会创建 `ai_chat` 数据库、`ai_user` 用户、`ai_chat_history` 表、相关索引，
-并写入 `alembic_version=0001_create_ai_chat_history`，避免后端启动时再次提示 AI
-迁移未应用。
+AI PostgreSQL 初始化脚本已移除，启动和迁移均不再依赖 PostgreSQL。

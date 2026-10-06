@@ -10,7 +10,6 @@ from settings import (
     CORS_ORIGINS,
     OPENAPI_TAGS,
 )
-from ai.routers import chat_router, turn_router
 from lifespan import lifespan
 from normal_system.routers import (
     auth_router,
@@ -59,8 +58,6 @@ def include_routers(app: FastAPI) -> None:
         post_router,
         friend_router,
         private_message_router,
-        chat_router,
-        turn_router,
         gate_router,
         github_router,
     ):

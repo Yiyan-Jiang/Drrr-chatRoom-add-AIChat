@@ -12,12 +12,6 @@ import type { Components } from 'react-markdown'
 import type { BundledLanguage } from 'shiki'
 import type { PluggableList } from 'unified'
 
-export const prettyCodeSelectors = {
-  line: '[data-line]',
-  highlightedLine: '[data-highlighted-line]',
-  highlightedChars: '[data-highlighted-chars]',
-} as const
-
 const prettyCodeOptions = {
   theme: 'github-light',
   keepBackground: false,
@@ -144,6 +138,7 @@ type CodeBlockPreProps = HTMLAttributes<HTMLPreElement> & {
 }
 
 function CodeBlockPre({ children, node: _node, ...props }: CodeBlockPreProps) {
+  void _node // The Markdown AST node is not a DOM attribute.
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -249,6 +244,7 @@ const defaultComponents: Components = {
     </blockquote>
   ),
   code: ({ children, className, node: _node, ...props }) => {
+    void _node
     const isBlock = Boolean(className?.includes('language-'))
       || Boolean((props as { 'data-language'?: string })['data-language'])
 

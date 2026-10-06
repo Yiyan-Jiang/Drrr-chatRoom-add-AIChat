@@ -52,7 +52,7 @@ test('MyPage settings tab loads and processes friend requests', () => {
   assert.match(source, /outgoingFriendRequests/)
 })
 
-test('RightSidebar appends paginated friends below the four AI entries', () => {
+test('RightSidebar displays paginated friends without AI entries', () => {
   const source = readSource('components/layout/RightSidebar/RightSidebar.tsx')
 
   assert.match(source, /friendsApi\.listFriends/)
@@ -65,7 +65,7 @@ test('RightSidebar appends paginated friends below the four AI entries', () => {
   assert.match(source, /grid auto-rows-\[90px\]/)
   assert.match(source, /h-\[90px\]/)
   assert.match(source, /mt-auto/)
-  assert.match(source, /AI_CHARACTERS\.map/)
+  assert.doesNotMatch(source, /AI_CHARACTERS|\/ai-chat/)
   assert.match(source, /friends\.map/)
 })
 

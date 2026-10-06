@@ -23,8 +23,8 @@ class UserDeleteOwnershipTest(unittest.TestCase):
     def test_delete_user_account_rejects_another_user(self):
         from normal_system.routers.user import delete_user_account
 
-        delete_mock = AsyncMock(return_value=True)
-        with patch("normal_system.routers.user.delete_user", delete_mock):
+        lookup_mock = AsyncMock()
+        with patch("normal_system.services.user.get_user_by_id", lookup_mock):
             with self.assertRaises(HTTPException) as ctx:
                 asyncio.run(
                     delete_user_account(
@@ -36,7 +36,7 @@ class UserDeleteOwnershipTest(unittest.TestCase):
 
         self.assertEqual(ctx.exception.status_code, 403)
         self.assertEqual(ctx.exception.detail, "Cannot delete another user")
-        delete_mock.assert_not_called()
+        lookup_mock.assert_not_called()
 
     def test_delete_user_account_allows_current_user(self):
         from normal_system.routers.user import delete_user_account
@@ -52,10 +52,10 @@ class UserDeleteOwnershipTest(unittest.TestCase):
                 )
             )
 
-        delete_mock.assert_awaited_once_with(db, 1)
+        delete_mock.assert_awaited_once_with(db, 1, requester_id=1)
 
     def test_delete_user_deletes_owned_rooms_before_deleting_user(self):
-        from normal_system.repositories import delete_user
+        from normal_system.services.user import delete_user
 
         user = object()
         db = AsyncMock()
@@ -66,7 +66,7 @@ class UserDeleteOwnershipTest(unittest.TestCase):
 
         db.execute.side_effect = record_execute
 
-        with patch("normal_system.repositories.get_user_by_id", AsyncMock(return_value=user)):
+        with patch("normal_system.services.user.get_user_by_id", AsyncMock(return_value=user)):
             result = asyncio.run(delete_user(db, 3))
 
         self.assertTrue(result)

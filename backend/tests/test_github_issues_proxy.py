@@ -6,21 +6,56 @@ from importlib import import_module
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.routing import APIRoute
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+import httpx
+
+from normal_system.integrations import github as github_client
 
 
 class GitHubIssuesProxyTest(unittest.IsolatedAsyncioTestCase):
+    def test_github_bad_credentials_are_not_returned_as_local_auth_failure(self):
+        with patch.dict(os.environ, {
+            "DATABASE_URL": "mysql+aiomysql://user:pass@localhost:3306/chat_rooms",
+            "CHAT_JWT_SECRET": "secret",
+            "CHAT_GATE_PASSWORD": "gate",
+        }):
+            from normal_system.routers import github
+
+        response = httpx.Response(
+            401,
+            json={"message": "Bad credentials"},
+            request=httpx.Request("GET", "https://api.github.com/repos/example/repo/issues"),
+        )
+        upstream = AsyncMock()
+        upstream.__aenter__.return_value.get.return_value = response
+        app = FastAPI()
+        app.include_router(github.router, prefix="/api")
+
+        with patch.object(github_client, "_github_cache", {}), patch.object(
+            github_client.httpx, "AsyncClient", return_value=upstream
+        ):
+            for path in (
+                "/api/github/issues",
+                "/api/github/issues/7",
+                "/api/github/issues/7/comments",
+            ):
+                with self.subTest(path=path):
+                    result = TestClient(app).get(path)
+                    self.assertEqual(result.status_code, 502)
+                    self.assertIn("GitHub", result.json()["detail"])
+
     def test_main_mounts_github_issues_proxy_route(self):
       with patch.dict(
           os.environ,
           {
               "DATABASE_URL": "mysql+aiomysql://user:pass@localhost:3306/chat_rooms",
-              "AI_DATABASE_URL": "postgresql+asyncpg://user:pass@localhost:5432/ai_chat",
               "CHAT_JWT_SECRET": "secret",
               "CHAT_GATE_PASSWORD": "gate",
           },
       ):
           sys.modules.pop("main", None)
-          main = importlib.import_module("main")
+          main = importlib.import_module("app_factory")
 
       routes = {
           (route.path, method)
@@ -69,7 +104,7 @@ class GitHubIssuesProxyTest(unittest.IsolatedAsyncioTestCase):
                 "GITHUB_TOKEN": "secret-token",
             },
             clear=False,
-        ), patch("normal_system.routers.github.httpx.AsyncClient", return_value=client):
+        ), patch("normal_system.integrations.github.httpx.AsyncClient", return_value=client):
             issues = await list_github_issues()
 
         get_call = client.__aenter__.return_value.get
@@ -118,7 +153,7 @@ class GitHubIssuesProxyTest(unittest.IsolatedAsyncioTestCase):
                 "GITHUB_ISSUES_REPO": "private-repo",
             },
             clear=False,
-        ), patch("normal_system.routers.github.httpx.AsyncClient", return_value=client):
+        ), patch("normal_system.integrations.github.httpx.AsyncClient", return_value=client):
             issue = await get_github_issue(7)
 
         get_call = client.__aenter__.return_value.get
@@ -160,7 +195,7 @@ class GitHubIssuesProxyTest(unittest.IsolatedAsyncioTestCase):
                 "GITHUB_ISSUES_REPO": "private-repo",
             },
             clear=False,
-        ), patch("normal_system.routers.github.httpx.AsyncClient", return_value=client):
+        ), patch("normal_system.integrations.github.httpx.AsyncClient", return_value=client):
             comments = await list_github_issue_comments(7)
 
         get_call = client.__aenter__.return_value.get
@@ -180,7 +215,7 @@ class GitHubIssuesProxyTest(unittest.IsolatedAsyncioTestCase):
             },
             clear=False,
         ):
-            github = import_module("normal_system.routers.github")
+            github = import_module("normal_system.integrations.github")
 
         response = MagicMock()
         response.status_code = 200
@@ -190,11 +225,11 @@ class GitHubIssuesProxyTest(unittest.IsolatedAsyncioTestCase):
         client = AsyncMock()
         client.__aenter__.return_value.get.return_value = response
 
-        with patch.object(github, "_github_cache", {}), patch.object(
+        with patch.object(github_client, "_github_cache", {}), patch.object(
             github,
             "monotonic",
             side_effect=[100.0, 120.0, 161.0],
-        ), patch("normal_system.routers.github.httpx.AsyncClient", return_value=client):
+        ), patch("normal_system.integrations.github.httpx.AsyncClient", return_value=client):
             first = await github._get_json_from_github("https://api.github.com/example")
             second = await github._get_json_from_github("https://api.github.com/example")
             third = await github._get_json_from_github("https://api.github.com/example")

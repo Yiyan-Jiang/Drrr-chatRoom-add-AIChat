@@ -13,13 +13,12 @@ class Phase5APIContractTest(unittest.TestCase):
             os.environ,
             {
                 "DATABASE_URL": "mysql+aiomysql://user:pass@localhost:3306/chat_rooms",
-                "AI_DATABASE_URL": "postgresql+asyncpg://user:pass@localhost:5432/ai_chat",
                 "CHAT_JWT_SECRET": "secret",
                 "CHAT_GATE_PASSWORD": "gate",
             },
         ):
             sys.modules.pop("main", None)
-            return importlib.import_module("main")
+            return importlib.import_module("app_factory")
 
     def test_http_api_routes_keep_public_contract(self):
         main = self._load_main()
@@ -49,9 +48,6 @@ class Phase5APIContractTest(unittest.TestCase):
             ("/api/messages/", "POST"),
             ("/api/messages/room/{room_id}", "GET"),
             ("/api/messages/room/{room_id}/page", "GET"),
-            ("/api/ai/chat", "POST"),
-            ("/api/ai/chat/history", "DELETE"),
-            ("/api/ai/turn", "POST"),
         }
 
         self.assertTrue(expected_routes.issubset(routes))

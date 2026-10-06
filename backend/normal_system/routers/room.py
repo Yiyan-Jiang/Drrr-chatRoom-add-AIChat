@@ -3,27 +3,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
 from common.dependencies import get_current_user_id
-from common.normal_database import async_session
+from common.normal_database import get_db
 from normal_system.schemas import RoomCreate, RoomInDB, RoomOwner, RoomUpdate, RoomWithMessages
 from normal_system.repositories import (
-    create_room,
     get_user_by_id,
     get_room_by_id,
     get_room_by_name,
-    delete_room,
     get_message_by_room,
     get_all_rooms,
     get_rooms_by_owner,
-    update_room,
 )
-from normal_system.routers.socket import room_presence, sio
+from normal_system.services.room import create_room, delete_room, update_room
+from normal_system.realtime.server import room_presence
+from normal_system.realtime.publisher import emit_room_deleted
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
-
-
-async def get_db():
-    async with async_session() as session:
-        yield session
 
 
 async def _to_room_response(db: AsyncSession, room) -> RoomInDB:
@@ -182,4 +176,4 @@ async def delete_existing_room(
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
     room_presence.clear_room(room_id)
-    await sio.emit("room_deleted", {"room_id": room_id}, room=f"room_{room_id}")
+    await emit_room_deleted(room_id)

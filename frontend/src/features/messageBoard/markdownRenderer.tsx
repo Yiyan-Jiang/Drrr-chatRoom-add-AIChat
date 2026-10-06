@@ -86,6 +86,7 @@ const components: Components = {
     </blockquote>
   ),
   code: ({ children, className, node: _node, ...props }) => {
+    void _node
     const isBlock = Boolean(className?.includes('language-'))
       || Boolean((props as { 'data-language'?: string })['data-language'])
 
@@ -97,14 +98,17 @@ const components: Components = {
       </code>
     )
   },
-  pre: ({ children, node: _node, ...props }) => (
-    <pre
-      {...props}
-      className="max-w-full overflow-auto rounded border border-zinc-800 bg-zinc-950 p-3 text-sm leading-6 text-zinc-200"
-    >
-      {children}
-    </pre>
-  ),
+  pre: ({ children, node: _node, ...props }) => {
+    void _node // Keep the Markdown AST node out of DOM props.
+    return (
+      <pre
+        {...props}
+        className="max-w-full overflow-auto rounded border border-zinc-800 bg-zinc-950 p-3 text-sm leading-6 text-zinc-200"
+      >
+        {children}
+      </pre>
+    )
+  },
   table: ({ children }) => (
     <div className="overflow-auto rounded border border-zinc-800">
       <table className="w-full border-collapse text-sm text-zinc-300">

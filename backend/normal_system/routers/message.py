@@ -3,22 +3,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
 from common.dependencies import get_current_user_id
-from common.normal_database import async_session
+from common.normal_database import get_db
 from normal_system.schemas import MessageCreate, MessageInDB, PaginatedMessagesResponse
 from normal_system.repositories import (
-    create_message,
     get_message_by_id,
     get_messages_page_by_room,
-    delete_message,
     serialize_message,
 )
+from normal_system.services.message import create_message, delete_message
 
 router = APIRouter(prefix="/messages", tags=["messages"])
-
-
-async def get_db():
-    async with async_session() as session:
-        yield session
 
 
 @router.post("/", response_model=MessageInDB, status_code=status.HTTP_201_CREATED)

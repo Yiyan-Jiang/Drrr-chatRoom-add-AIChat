@@ -2,13 +2,18 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.dependencies import get_current_user_id
-from common.normal_database import async_session
-from normal_system.repositories.post import (
+from common.normal_database import get_db
+from normal_system.services.post import (
     add_post_comment,
     create_post,
     delete_post,
     delete_post_comment,
     favorite_post,
+    like_post,
+    unfavorite_post,
+    unlike_post,
+)
+from normal_system.repositories.post import (
     get_post_detail,
     list_my_favorite_posts,
     list_my_liked_posts,
@@ -16,9 +21,6 @@ from normal_system.repositories.post import (
     list_my_posts,
     list_post_comments,
     list_posts,
-    like_post,
-    unfavorite_post,
-    unlike_post,
 )
 from normal_system.schemas import (
     PaginatedCommentsResponse,
@@ -31,11 +33,6 @@ from normal_system.schemas import (
 )
 
 router = APIRouter(prefix="/posts", tags=["posts"])
-
-
-async def get_db():
-    async with async_session() as session:
-        yield session
 
 
 @router.get("/", response_model=PaginatedPostsResponse)

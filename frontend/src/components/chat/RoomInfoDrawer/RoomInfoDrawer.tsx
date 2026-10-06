@@ -225,7 +225,11 @@ function XIcon({ className = '' }: { className?: string }) {
   )
 }
 
-export default function RoomInfoDrawer({
+export default function RoomInfoDrawer(props: RoomInfoDrawerProps) {
+  return props.open ? <RoomInfoDrawerContent key={props.room.id} {...props} /> : null
+}
+
+function RoomInfoDrawerContent({
   open,
   room,
   currentUserId,
@@ -264,12 +268,6 @@ export default function RoomInfoDrawer({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [editing, hasChanges, onClose, open])
-
-  useEffect(() => {
-    if (!open) return
-    setEditing(false)
-    setForm(toForm(room))
-  }, [open, room])
 
   if (!open) return null
 

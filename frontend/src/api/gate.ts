@@ -8,18 +8,14 @@ export const gateApi = {
     logger.debug('[gate] verify request', { hasPassword: Boolean(password) });
     const params = new URLSearchParams();
     params.append('password', password);
-    try {
-      const { data } = await apiClient.post('/gate/verify', params, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        withCredentials: true,
-      });
-      logger.debug('[gate] verify response received');
-      return data;
-    } catch (error: unknown) {
-      throw error;
-    }
+    const { data } = await apiClient.post('/gate/verify', params, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      withCredentials: true,
+    });
+    logger.debug('[gate] verify response received');
+    return data;
   },
   // gate 状态验证
   check: async () => {

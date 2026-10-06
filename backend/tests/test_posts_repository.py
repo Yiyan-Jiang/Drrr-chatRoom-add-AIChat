@@ -9,19 +9,21 @@ os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 from common.normal_database import Login
 from normal_system.models import User
-from normal_system.repositories.post import (
+from normal_system.services.post import (
     add_post_comment,
     create_post,
     favorite_post,
+    like_post,
+    unfavorite_post,
+    unlike_post,
+)
+from normal_system.repositories.post import (
     get_post_detail,
     list_my_favorite_posts,
     list_my_liked_posts,
     list_my_post_comments,
     list_my_posts,
     list_posts,
-    like_post,
-    unfavorite_post,
-    unlike_post,
 )
 from normal_system.schemas.post import PostCommentCreate, PostCreate
 

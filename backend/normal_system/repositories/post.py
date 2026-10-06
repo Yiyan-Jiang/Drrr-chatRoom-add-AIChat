@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from sqlalchemy import delete, func, select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from normal_system.models import User
@@ -10,10 +9,8 @@ from normal_system.schemas.post import (
     PaginatedCommentsResponse,
     PaginatedMyCommentsResponse,
     PaginatedPostsResponse,
-    PostCommentCreate,
     PostCommentInDB,
     PostCommentListItem,
-    PostCreate,
     PostDetail,
     PostListItem,
 )
@@ -56,45 +53,6 @@ async def _viewer_flags(db: AsyncSession, post_id: int, viewer_id: int | None) -
     return liked is not None, favorited is not None
 
 
-async def create_post(db: AsyncSession, payload: PostCreate, author_id: int) -> Post:
-    now = datetime.now()
-    post = Post(
-        title=payload.title,
-        content=payload.content,
-        author_id=author_id,
-        status="published",
-        created_at=now,
-        updated_at=now,
-    )
-    db.add(post)
-    await db.commit()
-    await db.refresh(post)
-    return post
-
-
-async def add_post_comment(
-    db: AsyncSession,
-    post_id: int,
-    payload: PostCommentCreate,
-    author_id: int,
-) -> PostComment:
-    post = await db.get(Post, post_id)
-    if not post:
-        raise ValueError("Post not found")
-    now = datetime.now()
-    comment = PostComment(
-        post_id=post_id,
-        author_id=author_id,
-        content=payload.content,
-        created_at=now,
-        updated_at=now,
-    )
-    db.add(comment)
-    await db.commit()
-    await db.refresh(comment)
-    return comment
-
-
 async def list_post_comments(
     db: AsyncSession,
     post_id: int,
@@ -130,71 +88,6 @@ async def list_post_comments(
         has_more=len(rows) > safe_limit,
         next_cursor=items[-1].id if len(rows) > safe_limit and items else None,
     )
-
-
-async def delete_post_comment(
-    db: AsyncSession,
-    post_id: int,
-    comment_id: int,
-    requester_id: int,
-) -> bool:
-    comment = await db.get(PostComment, comment_id)
-    if not comment or comment.post_id != post_id:
-        return False
-    if comment.author_id != requester_id:
-        raise PermissionError("Only comment author can delete this comment")
-    await db.delete(comment)
-    await db.commit()
-    return True
-
-
-async def delete_post(
-    db: AsyncSession,
-    post_id: int,
-    requester_id: int,
-) -> bool:
-    post = await db.get(Post, post_id)
-    if not post or post.status != "published":
-        return False
-    if post.author_id != requester_id:
-        raise PermissionError("Only post author can delete this post")
-    await db.delete(post)
-    await db.commit()
-    return True
-
-
-async def _add_unique(db: AsyncSession, model, post_id: int, user_id: int) -> None:
-    exists = await db.scalar(
-        select(model.id).where(model.post_id == post_id, model.user_id == user_id)
-    )
-    if exists is not None:
-        return
-    db.add(model(post_id=post_id, user_id=user_id, created_at=datetime.now()))
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-
-
-async def _delete_unique(db: AsyncSession, model, post_id: int, user_id: int) -> None:
-    await db.execute(delete(model).where(model.post_id == post_id, model.user_id == user_id))
-    await db.commit()
-
-
-async def like_post(db: AsyncSession, post_id: int, user_id: int) -> None:
-    await _add_unique(db, PostLike, post_id, user_id)
-
-
-async def unlike_post(db: AsyncSession, post_id: int, user_id: int) -> None:
-    await _delete_unique(db, PostLike, post_id, user_id)
-
-
-async def favorite_post(db: AsyncSession, post_id: int, user_id: int) -> None:
-    await _add_unique(db, PostFavorite, post_id, user_id)
-
-
-async def unfavorite_post(db: AsyncSession, post_id: int, user_id: int) -> None:
-    await _delete_unique(db, PostFavorite, post_id, user_id)
 
 
 async def _to_list_item(db: AsyncSession, post: Post, author: User | None, viewer_id: int | None) -> PostListItem:
@@ -406,3 +299,43 @@ async def list_my_post_comments(
         has_more=len(rows) > safe_limit,
         next_cursor=items[-1].id if len(rows) > safe_limit and items else None,
     )
+
+
+async def get_post_by_id(db: AsyncSession, post_id: int) -> Post | None:
+    return await db.get(Post, post_id)
+
+
+async def get_post_comment_by_id(db: AsyncSession, comment_id: int) -> PostComment | None:
+    return await db.get(PostComment, comment_id)
+
+
+def add_post(db: AsyncSession, **fields) -> Post:
+    post = Post(**fields)
+    db.add(post)
+    return post
+
+
+def add_comment(db: AsyncSession, **fields) -> PostComment:
+    comment = PostComment(**fields)
+    db.add(comment)
+    return comment
+
+
+async def remove_post(db: AsyncSession, post: Post) -> None:
+    await db.delete(post)
+
+
+async def remove_post_comment(db: AsyncSession, comment: PostComment) -> None:
+    await db.delete(comment)
+
+
+async def get_post_reaction_id(db: AsyncSession, model, post_id: int, user_id: int) -> int | None:
+    return await db.scalar(select(model.id).where(model.post_id == post_id, model.user_id == user_id))
+
+
+def add_post_reaction(db: AsyncSession, model, post_id: int, user_id: int, *, created_at: datetime) -> None:
+    db.add(model(post_id=post_id, user_id=user_id, created_at=created_at))
+
+
+async def remove_post_reaction(db: AsyncSession, model, post_id: int, user_id: int) -> None:
+    await db.execute(delete(model).where(model.post_id == post_id, model.user_id == user_id))

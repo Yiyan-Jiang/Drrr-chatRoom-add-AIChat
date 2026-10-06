@@ -22,7 +22,7 @@ class CommonNormalDatabaseTest(unittest.TestCase):
         self.assertIn("alembic -c normal_system/alembic.ini upgrade head", message)
         self.assertNotIn("ai/alembic.ini", message)
 
-        self.assertEqual(get_normal_alembic_head_revision(), "0001_normal_initial_schema")
+        self.assertEqual(get_normal_alembic_head_revision(), "0004_create_friends_private_chat")
         mismatch = build_normal_migration_revision_mismatch_error("old_revision", "head_revision")
         self.assertIn("old_revision", mismatch)
         self.assertIn("head_revision", mismatch)

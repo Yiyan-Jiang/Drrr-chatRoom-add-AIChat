@@ -26,20 +26,20 @@ export default function NewsFeed() {
   const [loadState, setLoadState] = useState<'loading' | 'success' | 'error'>('loading')
   const [query, setQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
-  const [currentPage, setCurrentPage] = useState(1)
+  const [requestedPage, setCurrentPage] = useState(1)
   const categories = getNewsCategories(documents)
   const filteredDocuments = filterNewsDocuments(documents, {
     query,
     category: selectedCategory,
   })
   const totalPages = Math.max(1, Math.ceil(filteredDocuments.length / PAGE_SIZE))
+  const currentPage = Math.min(requestedPage, totalPages)
   const pageStart = (currentPage - 1) * PAGE_SIZE
   const paginatedDocuments = filteredDocuments.slice(pageStart, pageStart + PAGE_SIZE)
 
   useEffect(() => {
     let isCurrent = true
 
-    setLoadState('loading')
     getAllNewsDocuments().then(
       (nextDocuments) => {
         if (!isCurrent) {
@@ -60,12 +60,6 @@ export default function NewsFeed() {
       isCurrent = false
     }
   }, [])
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages)
-    }
-  }, [currentPage, totalPages])
 
   return (
     <main className="h-full overflow-auto bg-black px-4 py-5 text-zinc-100 sm:px-6">
@@ -202,7 +196,7 @@ export default function NewsFeed() {
                 <button
                   className="rounded border border-zinc-800 px-3 py-1.5 text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-zinc-800 disabled:hover:text-zinc-300"
                   disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   type="button"
                 >
                   上一页
@@ -213,7 +207,7 @@ export default function NewsFeed() {
                 <button
                   className="rounded border border-zinc-800 px-3 py-1.5 text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-zinc-800 disabled:hover:text-zinc-300"
                   disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   type="button"
                 >
                   下一页

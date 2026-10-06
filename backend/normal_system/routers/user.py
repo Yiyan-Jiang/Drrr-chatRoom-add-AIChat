@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.dependencies import get_current_user_id, require_gate_passed
-from common.normal_database import async_session
+from common.normal_database import get_db
 from normal_system.schemas import (
     UserCreate,
     UserProfileUpdate,
@@ -12,21 +12,13 @@ from normal_system.schemas import (
 )
 from normal_system.repositories import (
     get_user_count,
-    create_user,
     get_user_by_id,
     get_user_by_username,
-    update_user,
-    update_user_profile,
-    delete_user,
 )
+from normal_system.services.user import create_user, update_user, update_user_profile, delete_user
 
 
 router = APIRouter(prefix="/users", tags=["users"])
-
-
-async def get_db():
-    async with async_session() as session:
-        yield session
 
 
 @router.get("/count", response_model=UserCountResponse)
@@ -94,10 +86,10 @@ async def update_user_info(
         current_user_id: int = Depends(get_current_user_id),
         db: AsyncSession = Depends(get_db),
 ):
-    if user_id != current_user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot update another user")
     try:
-        updated_user = await update_user(db, user_id, user_update)
+        updated_user = await update_user(db, user_id, user_update, requester_id=current_user_id)
+    except PermissionError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     if not updated_user:
@@ -111,8 +103,9 @@ async def delete_user_account(
     current_user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    if user_id != current_user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot delete another user")
-    success = await delete_user(db, user_id)
+    try:
+        success = await delete_user(db, user_id, requester_id=current_user_id)
+    except PermissionError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")

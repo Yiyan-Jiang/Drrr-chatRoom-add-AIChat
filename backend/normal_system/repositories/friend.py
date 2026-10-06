@@ -10,8 +10,6 @@ from normal_system.schemas.friend import (
     FriendRequestInDB,
     PaginatedFriendRequestsResponse,
     PaginatedFriendsResponse,
-    PaginatedPrivateMessagesResponse,
-    PrivateMessageInDB,
 )
 
 
@@ -30,18 +28,6 @@ def _serialize_request(request: FriendRequest, requester: User, recipient: User)
     )
 
 
-def _serialize_private_message(message: PrivateMessage, author: User) -> PrivateMessageInDB:
-    return PrivateMessageInDB(
-        id=message.id,
-        sender_id=message.sender_id,
-        recipient_id=message.recipient_id,
-        content=message.content,
-        client_message_id=message.client_message_id,
-        author=author,
-        created_at=message.created_at,
-    )
-
-
 async def get_friendship(db: AsyncSession, user_id: int, friend_id: int) -> Friendship | None:
     low_id, high_id = _friend_pair(user_id, friend_id)
     res = await db.execute(
@@ -51,87 +37,6 @@ async def get_friendship(db: AsyncSession, user_id: int, friend_id: int) -> Frie
         )
     )
     return res.scalar_one_or_none()
-
-
-async def create_friend_request(db: AsyncSession, requester_id: int, recipient_id: int) -> FriendRequest:
-    if requester_id == recipient_id:
-        raise ValueError("Cannot friend yourself")
-    if await get_friendship(db, requester_id, recipient_id):
-        raise ValueError("Users are already friends")
-
-    res = await db.execute(
-        select(FriendRequest).where(
-            FriendRequest.requester_id == requester_id,
-            FriendRequest.recipient_id == recipient_id,
-            FriendRequest.status == "pending",
-        )
-    )
-    if res.scalar_one_or_none():
-        raise ValueError("pending request already exists")
-
-    request = FriendRequest(
-        requester_id=requester_id,
-        recipient_id=recipient_id,
-        status="pending",
-        created_at=datetime.now(),
-        updated_at=datetime.now(),
-    )
-    db.add(request)
-    await db.commit()
-    await db.refresh(request)
-    return request
-
-
-async def accept_friend_request(db: AsyncSession, request_id: int, recipient_id: int) -> FriendRequest:
-    res = await db.execute(select(FriendRequest).where(FriendRequest.id == request_id))
-    request = res.scalar_one_or_none()
-    if not request:
-        raise ValueError("Friend request not found")
-    if request.recipient_id != recipient_id:
-        raise PermissionError("Only recipient can accept this request")
-    if request.status != "pending":
-        raise ValueError("Friend request is not pending")
-
-    low_id, high_id = _friend_pair(request.requester_id, request.recipient_id)
-    friendship = await get_friendship(db, request.requester_id, request.recipient_id)
-    if friendship is None:
-        db.add(Friendship(user_low_id=low_id, user_high_id=high_id, created_at=datetime.now()))
-    request.status = "accepted"
-    request.updated_at = datetime.now()
-    await db.commit()
-    await db.refresh(request)
-    return request
-
-
-async def reject_friend_request(db: AsyncSession, request_id: int, recipient_id: int) -> FriendRequest:
-    return await _update_request_status(db, request_id, recipient_id, "rejected", role="recipient")
-
-
-async def cancel_friend_request(db: AsyncSession, request_id: int, requester_id: int) -> FriendRequest:
-    return await _update_request_status(db, request_id, requester_id, "canceled", role="requester")
-
-
-async def _update_request_status(
-    db: AsyncSession,
-    request_id: int,
-    actor_id: int,
-    status: str,
-    role: str,
-) -> FriendRequest:
-    res = await db.execute(select(FriendRequest).where(FriendRequest.id == request_id))
-    request = res.scalar_one_or_none()
-    if not request:
-        raise ValueError("Friend request not found")
-    expected_id = request.recipient_id if role == "recipient" else request.requester_id
-    if expected_id != actor_id:
-        raise PermissionError(f"Only {role} can update this request")
-    if request.status != "pending":
-        raise ValueError("Friend request is not pending")
-    request.status = status
-    request.updated_at = datetime.now()
-    await db.commit()
-    await db.refresh(request)
-    return request
 
 
 async def list_friend_requests(
@@ -198,10 +103,41 @@ async def list_friends(
     )
 
 
-async def delete_friendship(db: AsyncSession, user_id: int, friend_id: int) -> bool:
-    friendship = await get_friendship(db, user_id, friend_id)
-    if not friendship:
-        return False
+async def get_pending_friend_request(db: AsyncSession, requester_id: int, recipient_id: int) -> FriendRequest | None:
+    res = await db.execute(
+        select(FriendRequest).where(
+            FriendRequest.requester_id == requester_id,
+            FriendRequest.recipient_id == recipient_id,
+            FriendRequest.status == "pending",
+        )
+    )
+    return res.scalar_one_or_none()
+
+
+async def get_friend_request_by_id(db: AsyncSession, request_id: int) -> FriendRequest | None:
+    res = await db.execute(select(FriendRequest).where(FriendRequest.id == request_id))
+    return res.scalar_one_or_none()
+
+
+def add_friend_request(db: AsyncSession, **fields) -> FriendRequest:
+    request = FriendRequest(**fields)
+    db.add(request)
+    return request
+
+
+def add_friendship(db: AsyncSession, user_id: int, friend_id: int, *, created_at: datetime) -> Friendship:
+    low_id, high_id = _friend_pair(user_id, friend_id)
+    friendship = Friendship(user_low_id=low_id, user_high_id=high_id, created_at=created_at)
+    db.add(friendship)
+    return friendship
+
+
+def set_friend_request_status(request: FriendRequest, status: str, *, updated_at: datetime) -> None:
+    request.status = status
+    request.updated_at = updated_at
+
+
+async def remove_friendship_and_messages(db: AsyncSession, friendship: Friendship, user_id: int, friend_id: int) -> None:
     await db.execute(
         delete(PrivateMessage).where(
             or_(
@@ -211,75 +147,3 @@ async def delete_friendship(db: AsyncSession, user_id: int, friend_id: int) -> b
         )
     )
     await db.delete(friendship)
-    await db.commit()
-    return True
-
-
-async def get_private_message_by_client_message_id(
-    db: AsyncSession,
-    client_message_id: str,
-) -> PrivateMessage | None:
-    res = await db.execute(select(PrivateMessage).where(PrivateMessage.client_message_id == client_message_id))
-    return res.scalar_one_or_none()
-
-
-async def create_private_message(
-    db: AsyncSession,
-    sender_id: int,
-    recipient_id: int,
-    content: str,
-    client_message_id: str | None = None,
-) -> PrivateMessage:
-    if not await get_friendship(db, sender_id, recipient_id):
-        raise PermissionError("Only friends can send private messages")
-    if client_message_id:
-        existing = await get_private_message_by_client_message_id(db, client_message_id)
-        if existing:
-            return existing
-
-    message = PrivateMessage(
-        sender_id=sender_id,
-        recipient_id=recipient_id,
-        content=content.strip(),
-        client_message_id=client_message_id,
-        created_at=datetime.now(),
-    )
-    db.add(message)
-    await db.commit()
-    await db.refresh(message)
-    return message
-
-
-async def list_private_messages(
-    db: AsyncSession,
-    user_id: int,
-    friend_id: int,
-    limit: int = 20,
-    before_id: int | None = None,
-) -> PaginatedPrivateMessagesResponse:
-    safe_limit = max(1, min(limit, 50))
-    filters = [
-        or_(
-            and_(PrivateMessage.sender_id == user_id, PrivateMessage.recipient_id == friend_id),
-            and_(PrivateMessage.sender_id == friend_id, PrivateMessage.recipient_id == user_id),
-        )
-    ]
-    if before_id is not None:
-        filters.append(PrivateMessage.id < before_id)
-
-    res = await db.execute(
-        select(PrivateMessage, User)
-        .join(User, PrivateMessage.sender_id == User.id)
-        .where(*filters)
-        .order_by(PrivateMessage.id.desc())
-        .limit(safe_limit + 1)
-    )
-    rows = res.all()
-    has_more = len(rows) > safe_limit
-    page_rows = rows[:safe_limit]
-    items = [_serialize_private_message(message, author) for message, author in page_rows]
-    return PaginatedPrivateMessagesResponse(
-        items=items,
-        has_more=has_more,
-        next_before_id=items[-1].id if has_more and items else None,
-    )

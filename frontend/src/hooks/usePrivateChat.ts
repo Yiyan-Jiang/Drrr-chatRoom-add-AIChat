@@ -2,11 +2,12 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { usersApi } from '@/api/users'
 import { privateMessagesApi } from '@/api/privateMessages'
 import { socketManager } from '@/services/socket'
-import type { Message } from '@/types/chat'
+import type { Message, PaginatedMessagesResponse } from '@/types/chat'
 import type { PrivateMessage } from '@/types/privateMessages'
 import type { User } from '@/types/user'
 import { createOptimisticMessage, mergeMessages } from './chatMessageMerge'
 import { logger } from '@/utils/logger'
+import { mergeRecoveredHistory, recoverChatHistory } from './chatHistory'
 
 type PrivateChatState = {
   friend: User | null
@@ -25,6 +26,8 @@ type PrivateChatAction =
   | { type: 'LOAD_FAILURE'; error: string }
   | { type: 'OLDER_START' }
   | { type: 'OLDER_SUCCESS'; messages: Message[]; hasMore: boolean; nextBeforeId: number | null }
+  | { type: 'OLDER_FAILURE' }
+  | { type: 'MESSAGES_RECOVERED'; page: PaginatedMessagesResponse }
   | { type: 'MESSAGES_MERGED'; messages: Message[]; mode: 'head' | 'tail' }
   | { type: 'OPTIMISTIC_MESSAGE_ADDED'; message: Message }
   | { type: 'MESSAGE_ACK'; message: Message }
@@ -60,7 +63,7 @@ function reducer(state: PrivateChatState, action: PrivateChatAction): PrivateCha
       return {
         ...state,
         friend: action.friend,
-        messages: mergeMessages([], action.messages, 'head'),
+        messages: mergeMessages(state.messages, action.messages, 'head'),
         initialLoading: false,
         hasMore: action.hasMore,
         nextBeforeId: action.nextBeforeId,
@@ -70,6 +73,10 @@ function reducer(state: PrivateChatState, action: PrivateChatAction): PrivateCha
       return { ...state, initialLoading: false, error: action.error }
     case 'OLDER_START':
       return { ...state, loadingOlder: true }
+    case 'OLDER_FAILURE':
+      return { ...state, loadingOlder: false }
+    case 'MESSAGES_RECOVERED':
+      return { ...state, ...mergeRecoveredHistory(state, action.page) }
     case 'OLDER_SUCCESS':
       return {
         ...state,
@@ -109,6 +116,7 @@ export function usePrivateChat(friendId: number, user: User | null, isNearHead: 
   const [state, dispatch] = useReducer(reducer, initialState)
   const [composerValue, setComposerValue] = useState('')
   const stateRef = useRef(state)
+  const requestScope = useRef({ cancelled: false, friendId })
   const ackTimers = useRef(new Map<string, number>())
 
   useEffect(() => {
@@ -124,22 +132,34 @@ export function usePrivateChat(friendId: number, user: User | null, isNearHead: 
 
   const loadOlderMessages = useCallback(async () => {
     const current = stateRef.current
-    if (!friendId || current.loadingOlder || !current.hasMore) return
+    const scope = requestScope.current
+    if (scope.cancelled || scope.friendId !== friendId || !friendId || current.loadingOlder || !current.hasMore) return
     dispatch({ type: 'OLDER_START' })
-    const page = await privateMessagesApi.getPageByFriend(friendId, {
-      limit: 20,
-      beforeId: current.nextBeforeId,
-    })
-    dispatch({
-      type: 'OLDER_SUCCESS',
-      messages: page.items.map(toMessage),
-      hasMore: page.has_more,
-      nextBeforeId: page.next_before_id,
-    })
+    try {
+      const page = await privateMessagesApi.getPageByFriend(friendId, {
+        limit: 20,
+        beforeId: current.nextBeforeId,
+      })
+      if (scope.cancelled) return
+      dispatch({
+        type: 'OLDER_SUCCESS',
+        messages: page.items.map(toMessage),
+        hasMore: page.has_more,
+        nextBeforeId: page.next_before_id,
+      })
+    } catch (error) {
+      if (scope.cancelled) return
+      logger.error('[private-chat] history fetch failed', {
+        message: error instanceof Error ? error.message : String(error),
+      })
+      dispatch({ type: 'OLDER_FAILURE' })
+    }
   }, [friendId])
 
   useEffect(() => {
     if (!friendId) return
+    const scope = { cancelled: false, friendId }
+    requestScope.current = scope
     let cancelled = false
     async function loadInitial() {
       dispatch({ type: 'LOAD_START' })
@@ -166,30 +186,68 @@ export function usePrivateChat(friendId: number, user: User | null, isNearHead: 
     loadInitial()
     return () => {
       cancelled = true
+      scope.cancelled = true
     }
   }, [friendId])
 
   useEffect(() => {
     if (!friendId || !user) return
+    let cancelled = false
+    let lastMessageId = Math.max(0, ...stateRef.current.messages.map((message) => message.id))
+    let recovering = false
+    let recoveryFailed = false
+    let recoveryGeneration = 0
+    const isCurrentConversation = (message: PrivateMessage) =>
+      (message.sender_id === user.id && message.recipient_id === friendId)
+      || (message.sender_id === friendId && message.recipient_id === user.id)
 
     const handlePrevious = (messages: PrivateMessage[]) => {
-      dispatch({ type: 'MESSAGES_MERGED', messages: messages.map(toMessage), mode: 'head' })
+      dispatch({ type: 'MESSAGES_MERGED', messages: messages.filter(isCurrentConversation).map(toMessage), mode: 'head' })
     }
     const handleAck = (message: PrivateMessage) => {
+      if (!isCurrentConversation(message)) return
       clearAckTimer(message.client_message_id)
       dispatch({ type: 'MESSAGE_ACK', message: toMessage(message) })
     }
     const handleNew = (message: PrivateMessage) => {
+      if (!isCurrentConversation(message)) return
       const nearHead = isNearHead()
       dispatch({ type: 'MESSAGES_MERGED', messages: [toMessage(message)], mode: 'head' })
       if (nearHead || message.sender_id === user.id) scrollToHead()
     }
     const handleError = (data: { message: string }) => dispatch({ type: 'ERROR', error: data.message })
     const handleReconnect = () => {
+      const generation = ++recoveryGeneration
+      recovering = true
       dispatch({ type: 'RECONNECTING_CHANGED', reconnecting: false })
       socketManager.joinPrivateChat(friendId)
+      recoverChatHistory(
+        (beforeId) => privateMessagesApi.getPageByFriend(friendId, { limit: 50, beforeId }),
+        lastMessageId,
+        (page) => dispatch({ type: 'MESSAGES_RECOVERED', page: { ...page, items: page.items.map(toMessage) } }),
+        () => !cancelled && generation === recoveryGeneration,
+      ).then(() => {
+        if (cancelled || generation !== recoveryGeneration) return
+        recovering = false
+        recoveryFailed = false
+      }).catch((error) => {
+        if (cancelled || generation !== recoveryGeneration) return
+        recovering = false
+        recoveryFailed = true
+        logger.error('[private-chat] reconnect history fetch failed', {
+          message: error instanceof Error ? error.message : String(error),
+        })
+      })
     }
-    const handleDisconnect = () => dispatch({ type: 'RECONNECTING_CHANGED', reconnecting: true })
+    const handleDisconnect = () => {
+      if (!recovering && !recoveryFailed) {
+        lastMessageId = Math.max(0, ...stateRef.current.messages.map((message) => message.id))
+      }
+      recoveryFailed = recoveryFailed || recovering
+      recovering = false
+      recoveryGeneration++
+      dispatch({ type: 'RECONNECTING_CHANGED', reconnecting: true })
+    }
 
     socketManager.joinPrivateChat(friendId)
     socketManager.onPrivatePreviousMessages(handlePrevious)
@@ -201,6 +259,7 @@ export function usePrivateChat(friendId: number, user: User | null, isNearHead: 
     const timers = ackTimers.current
 
     return () => {
+      cancelled = true
       socketManager.offPrivatePreviousMessages(handlePrevious)
       socketManager.offPrivateMessageAck(handleAck)
       socketManager.offPrivateNewMessage(handleNew)

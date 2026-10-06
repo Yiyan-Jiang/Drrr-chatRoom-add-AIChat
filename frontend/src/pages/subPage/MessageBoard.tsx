@@ -33,22 +33,25 @@ function getErrorMessage(error: unknown): string {
 export default function MessageBoard() {
   const navigate = useNavigate()
   const [issues, setIssues] = useState<MessageBoardIssue[]>([])
-  const [loadState, setLoadState] = useState<LoadState>('idle')
+  const [loadState, setLoadState] = useState<LoadState>('loading')
   const [errorMessage, setErrorMessage] = useState('')
 
-  const loadIssues = useCallback(async () => {
-    setLoadState('loading')
-    setErrorMessage('')
-
-    try {
-      const nextIssues = await githubIssuesApi.list()
+  const loadIssues = useCallback(() => githubIssuesApi.list().then(
+    (nextIssues) => {
       setIssues(nextIssues)
       setLoadState('success')
-    } catch (error) {
+    },
+    (error: unknown) => {
       setErrorMessage(getErrorMessage(error))
       setLoadState('error')
-    }
-  }, [])
+    },
+  ), [])
+
+  const refreshIssues = () => {
+    setLoadState('loading')
+    setErrorMessage('')
+    void loadIssues()
+  }
 
   useEffect(() => {
     void loadIssues()
@@ -65,7 +68,7 @@ export default function MessageBoard() {
             <button
               className="w-fit rounded border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-900"
               type="button"
-              onClick={loadIssues}
+              onClick={refreshIssues}
               disabled={loadState === 'loading'}
             >
               {loadState === 'loading' ? '刷新中' : '刷新'}
@@ -85,7 +88,7 @@ export default function MessageBoard() {
             <button
               className="mt-4 rounded border border-red-800 px-3 py-1.5 text-sm text-red-100 transition hover:bg-red-950"
               type="button"
-              onClick={loadIssues}
+              onClick={refreshIssues}
             >
               重试
             </button>
