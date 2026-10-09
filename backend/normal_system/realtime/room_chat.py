@@ -1,7 +1,10 @@
 from common.normal_database import async_session
 from normal_system.repositories.user import get_user_by_id
 from normal_system.repositories.room import get_room_by_id
-from normal_system.repositories.message import get_messages_with_authors_by_room, serialize_message
+from normal_system.repositories.message import (
+    get_messages_with_authors_by_room,
+    serialize_message,
+)
 from normal_system.services.message import create_message
 from normal_system.services.room import update_room_peak_online_members
 from normal_system.schemas import MessageCreate
@@ -11,7 +14,7 @@ from normal_system.realtime.server import room_presence, sio
 
 
 async def join_room(sid: str, data: dict):
-    room_id = data.get('room_id')
+    room_id = data.get("room_id")
     if not _is_strict_int(room_id):
         await sio.emit("error", {"message": "room_id must be an integer"}, to=sid)
         return
@@ -50,6 +53,22 @@ async def join_room(sid: str, data: dict):
                 )
         except Exception as exc:
             print(f"Failed to update room peak online members: {exc}")
+        async with async_session() as db:
+            user = await get_user_by_id(db, user_id)
+            if user:
+                db_message = await create_message(
+                    db,
+                    MessageCreate(
+                        content=f"-- {user.nickname or user.username} joined the room --",
+                        room_id=room_id,
+                    ),
+                    user_id=user_id,
+                    message_type="system",
+                )
+                message_data = serialize_message(db_message, user).model_dump(
+                    mode="json"
+                )
+                await sio.emit("new_message", message_data, room=room_name)
     await emit_room_member_count(room_id)
     await emit_room_members(room_id)
 
@@ -62,11 +81,15 @@ async def join_room(sid: str, data: dict):
 
 
 async def send_message(sid: str, data: dict):
-    room_id = data.get('room_id')
-    content = data.get('content')
-    client_message_id = data.get('client_message_id')
+    room_id = data.get("room_id")
+    content = data.get("content")
+    client_message_id = data.get("client_message_id")
 
-    if not _is_strict_int(room_id) or not isinstance(content, str) or not content.strip():
+    if (
+        not _is_strict_int(room_id)
+        or not isinstance(content, str)
+        or not content.strip()
+    ):
         await sio.emit("error", {"message": "Invalid message payload"}, to=sid)
         return
     if client_message_id is not None and (
@@ -97,7 +120,9 @@ async def send_message(sid: str, data: dict):
         except ValueError as e:
             await sio.emit("error", {"message": str(e)}, to=sid)
             return
-        user = await get_user_by_id(db, db_message.user_id) if db_message.user_id else None
+        user = (
+            await get_user_by_id(db, db_message.user_id) if db_message.user_id else None
+        )
 
     room_name = f"room_{room_id}"
     message_data = serialize_message(db_message, user).model_dump(mode="json")
@@ -108,7 +133,7 @@ async def send_message(sid: str, data: dict):
 
 
 async def leave_room(sid: str, data: dict):
-    room_id = data.get('room_id')
+    room_id = data.get("room_id")
     if _is_strict_int(room_id):
         room_id = int(room_id)
         if not room_presence.is_sid_in_room(sid, room_id):
@@ -135,5 +160,7 @@ async def leave_room(sid: str, data: dict):
                         user_id=user_id,
                         message_type="system",
                     )
-                    message_data = serialize_message(db_message, user).model_dump(mode="json")
+                    message_data = serialize_message(db_message, user).model_dump(
+                        mode="json"
+                    )
                     await sio.emit("new_message", message_data, room=f"room_{room_id}")
