@@ -94,26 +94,22 @@
 
 所有关键变更都要能被命令验证。按改动范围选择，不要求每次全跑。
 
-```bash
-cd backend
-python main.py
-```
+- 项目只维护端到端测试或冒烟测试，不新增单元测试、集成测试或源码结构断言。
+- 自动冒烟统一放在 `tests/`，从仓库根目录运行，通过真实 HTTP / Socket.IO 访问启动的前后端和 MySQL。
+- 不用 mock、依赖覆盖、SQLite 内存库或直接调用内部函数来替代业务链路。
+- 测试使用本次创建的临时数据，在 `finally` 中通过公开接口清理；业务失败或清理失败都返回非零退出码。
+- 新功能或修复优先补充对应冒烟场景，页面交互按 [测试说明](tests/README.md) 做端到端人工检查。
+- 构建、lint 和格式检查属于静态检查，不代表端到端或冒烟通过。
 
 ```bash
-cd backend
-python -m pytest
+# 先按 README 启动前后端和已迁移的 MySQL
+npm run test:smoke
 ```
 
 ```bash
 cd frontend
 npm run build
 npm run lint
-```
-
-```bash
-cd frontend
-npm run test:chat-room-lifecycle
-npm run test:friend-private-chat
 ```
 
 ## Git / Commit 规范
