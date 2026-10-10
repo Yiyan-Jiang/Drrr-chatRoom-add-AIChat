@@ -83,6 +83,10 @@ npm run test:smoke
 冒烟覆盖门禁、注册登录、群聊实时收发与持久化、好友私聊、帖子互动，并清理本次创建的数据。
 具体环境要求、覆盖范围和页面端到端人工检查见 [测试说明](tests/README.md)。
 
+[GitHub Actions 工作流](.github/workflows/smoke.yml) 在 push、PR 和手动触发时运行构建、lint 及同一套真实服务冒烟。
+云端会启动临时 MySQL 和前后端，自动生成测试配置，结束后清理；无需提交个人 `.env` 或配置仓库 Secrets。
+工作流文件提交并推送后，可在仓库 Actions / Checks 查看结果。
+
 静态检查另行运行，不等同于冒烟或页面端到端测试通过：
 
 ```bash
