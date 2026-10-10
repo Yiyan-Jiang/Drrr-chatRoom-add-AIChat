@@ -185,7 +185,7 @@
 2. 定义明确 props 类型。
 3. 通过回调向外通知操作，不直接改全局状态。
 4. 延续当前 Tailwind / CSS 文件风格。
-5. 验证：`cd frontend && npm run build`，必要时补对应测试。
+5. 验证：`cd frontend && npm run build`，按 `tests/README.md` 做对应页面的端到端检查；不新增组件单元测试或源码正则断言。
 
 ### 新 HTTP API
 
@@ -193,7 +193,7 @@
 2. 通过 `app_factory.py` 已挂载的 router 暴露。
 3. 前端在 `frontend/src/api/` 增加封装。
 4. 涉及响应结构时同步 `frontend/src/types/chat.ts` 或新增类型文件。
-5. 验证：`cd backend && python -m pytest`，再跑相关前端构建或测试。
+5. 验证：启动真实前后端与已迁移的 MySQL，在仓库根目录运行 `npm run test:smoke`，再跑相关前端构建或 lint。
 
 ### 新 Socket.IO 事件
 
@@ -201,4 +201,12 @@
 2. 前端在 `socketManager.ts` 增加 emit/on/off 封装。
 3. 使用方放在 hook 内，不直接写到页面组件。
 4. 同步更新类型和生命周期清理逻辑。
-5. 验证：至少跑 `npm run test:chat-room-lifecycle` 或手动启动前后端验证。
+5. 验证：在仓库根目录运行 `npm run test:smoke`，并按 `tests/README.md` 用两个浏览器会话检查聊天交互。
+
+## 9. 测试范围
+
+- 只维护端到端测试或冒烟测试，统一入口和场景说明见 [tests/README.md](tests/README.md)。
+- 不新增单元测试、集成测试、mock、SQLite 内存库、依赖覆盖或读取源码的结构断言。
+- 自动测试通过公开 HTTP / Socket.IO 接口访问真实服务，不直接调用 repository、service、hook 等内部实现。
+- 使用临时测试数据并在成功或失败后清理，清理失败也必须报告失败。
+- 前端构建与 lint 是静态检查；没有实际业务链路验证证据时，不宣称测试通过。

@@ -11,11 +11,6 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "format:staged": "prettier --write",
-    "test:chat-behavior": "node --test tests/chat-behavior.test.mjs",
-    "test:chat-room-lifecycle": "tsc --ignoreConfig --target ES2022 --module NodeNext --moduleResolution NodeNext --types node --outDir .tmp/tests tests/chat-room-lifecycle.test.ts && node --test .tmp/tests/chat-room-lifecycle.test.js",
-    "test:friend-private-chat": "tsc --ignoreConfig --target ES2022 --module NodeNext --moduleResolution NodeNext --types node,vite/client --outDir ../.tmp-friend-tests tests/private-chat-contract.test.ts tests/friend-ui-contract.test.ts && node --test ../.tmp-friend-tests/private-chat-contract.test.js ../.tmp-friend-tests/friend-ui-contract.test.js",
-    "test:github-issues-api": "tsc --ignoreConfig --target ES2022 --module NodeNext --moduleResolution NodeNext --types node,vite/client --outDir .tmp/tests tests/github-issues-api.test.ts && node --test .tmp/tests/tests/github-issues-api.test.js",
-    "test:news-documents": "tsc --ignoreConfig --target ES2022 --module NodeNext --moduleResolution NodeNext --types node,vite/client --outDir ../.tmp-news-documents-tests tests/news-documents.test.ts tests/news-feed-page.test.ts tests/news-article-detail.test.ts && node --test ../.tmp-news-documents-tests/tests/news-documents.test.js ../.tmp-news-documents-tests/tests/news-feed-page.test.js ../.tmp-news-documents-tests/tests/news-article-detail.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

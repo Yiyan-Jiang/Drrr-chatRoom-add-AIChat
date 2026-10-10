@@ -3,6 +3,8 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
+    "test": "npm run test:smoke",
+    "test:smoke": "node --env-file-if-exists=backend/.env tests/smoke.mjs",
     "prepare": "husky"
   },
   "devDependencies": {

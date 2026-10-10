@@ -68,21 +68,27 @@ Compose 只启动 MySQL、后端和前端。MySQL 地址在容器内被覆盖为
 
 ## 验证
 
-后端测试需要额外安装 pytest：
+项目只维护端到端测试或冒烟测试，不维护单元测试、集成测试或源码结构断言。
+自动冒烟通过真实 HTTP / Socket.IO 访问运行中的前后端和 MySQL，复用现有前端依赖，无需安装 pytest 或额外测试框架。
+
+先按上文启动本地服务，或运行 `docker compose up -d --build`。宿主机需 Node.js 22.9+，并已安装前端依赖。
+在仓库根目录运行：
 
 ```bash
-cd backend
-python -m pip install pytest
-python -m pytest
+npm run test:smoke
+# npm test 是同一个冒烟入口
 ```
+
+命令自动读取本地 `backend/.env` 的门禁密码；使用其他服务地址时通过环境变量指定。
+冒烟覆盖门禁、注册登录、群聊实时收发与持久化、好友私聊、帖子互动，并清理本次创建的数据。
+具体环境要求、覆盖范围和页面端到端人工检查见 [测试说明](tests/README.md)。
+
+静态检查另行运行，不等同于冒烟或页面端到端测试通过：
 
 ```bash
 cd frontend
 npm run build
 npm run lint
-npm run test:chat-room-lifecycle
-npm run test:friend-private-chat
-npm run test:github-issues-api
 ```
 
 ## 主要边界
