@@ -1,0 +1,73 @@
+name: Smoke
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Build, lint and live smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CHAT_GATE_PASSWORD: ci-smoke-gate
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm --prefix frontend ci
+
+      - name: Build and lint frontend
+        run: |
+          npm --prefix frontend run build
+          npm --prefix frontend run lint
+
+      - name: Configure temporary test environment
+        id: configure
+        run: |
+          cp backend/.env.example backend/.env
+          printf '\nCHAT_GATE_PASSWORD=%s\nCHAT_GATE_COOKIE_SECRET=%s\nCHAT_JWT_SECRET=%s\n' \
+            "$CHAT_GATE_PASSWORD" "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" >> backend/.env
+
+      - name: Start MySQL, backend and frontend
+        run: docker compose up --build --wait --wait-timeout 180
+
+      - name: Wait for HTTP readiness
+        run: |
+          for _ in $(seq 1 60); do
+            if curl --fail --silent --max-time 3 http://127.0.0.1:8000/api/users/count > /dev/null \
+              && curl --fail --silent --max-time 3 http://127.0.0.1:5173 > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'Frontend or backend did not become ready' >&2
+          exit 1
+
+      - name: Run live HTTP and Socket.IO smoke
+        run: npm test
+
+      - name: Show service logs on failure
+        if: failure() && steps.configure.outcome == 'success'
+        run: |
+          docker compose ps
+          docker compose logs --no-color --tail 150
+
+      - name: Remove temporary services and database
+        if: always() && steps.configure.outcome == 'success'
+        run: docker compose down --volumes --remove-orphans
