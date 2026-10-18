@@ -1,3 +1,5 @@
+"""校验 Socket.IO 建连身份并清理断开连接的在线记录。"""
+
 from common.auth import decode_access_token
 from common.normal_database import async_session
 from normal_system.repositories.user import get_user_by_id
@@ -5,18 +7,21 @@ from normal_system.realtime.server import room_presence, sio
 
 
 def _is_strict_int(val: object) -> bool:
+    """判断值是否为整数，并排除布尔值。"""
     return isinstance(val, int) and not isinstance(val, bool)
 
 
 async def get_current_user_id(sid: str) -> int:
+    """读取建连时保存在 Socket.IO session 中的用户 ID，缺失时抛出 ValueError。"""
     session: dict = await sio.get_session(sid)
-    user_id = session.get('user_id')
+    user_id = session.get("user_id")
     if user_id is None:
         raise ValueError("User not found")
     return user_id
 
 
 async def connect(sid: str, environ: dict, auth: dict | None = None):
+    """在建连时校验访问令牌和账号存在性，并保存用户 ID。"""
     if not isinstance(auth, dict) or not auth:
         await sio.disconnect(sid)
         return
@@ -42,6 +47,7 @@ async def connect(sid: str, environ: dict, auth: dict | None = None):
 
 
 async def disconnect(sid: str):
+    """清理断开连接的在线记录，并向受影响房间广播剩余人数。"""
     changed_counts = room_presence.disconnect(sid)
     for room_id, online_members in changed_counts.items():
         await sio.emit(

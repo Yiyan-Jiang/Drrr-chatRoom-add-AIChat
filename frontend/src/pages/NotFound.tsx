@@ -1,3 +1,4 @@
+/** 展示未匹配路由提示，并提供首页和浏览器返回入口。 */
 import { Link, useNavigate } from 'react-router-dom'
 import logoSource from '@/assets/icon/Logo/logo.png'
 import backImg from '@/assets/pages/404/backImg.png'
@@ -5,7 +6,13 @@ import backIconModle from '@/assets/pages/404/backIconModle.png'
 
 function HomeIcon() {
   return (
-    <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg
+      aria-hidden="true"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
       <path
         d="m3 11 9-8 9 8"
         strokeLinecap="round"
@@ -30,7 +37,13 @@ function HomeIcon() {
 
 function BackIcon() {
   return (
-    <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg
+      aria-hidden="true"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
       <path
         d="M10 19 3 12m0 0 7-7m-7 7h18"
         strokeLinecap="round"
@@ -41,6 +54,7 @@ function BackIcon() {
   )
 }
 
+/** 展示未匹配路由提示，并提供首页和浏览器返回入口。 */
 export default function NotFound() {
   const navigate = useNavigate()
 
@@ -62,10 +76,19 @@ export default function NotFound() {
       <header className="fixed inset-x-0 top-0 z-40 border-b border-zinc-900 bg-black/95">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link className="flex min-w-0 items-center gap-3" to="/">
-            <img alt="Drrr logo" className="h-8 w-8 shrink-0 object-contain" src={logoSource} />
-            <span className="truncate text-sm font-semibold text-zinc-100">404</span>
+            <img
+              alt="Drrr logo"
+              className="h-8 w-8 shrink-0 object-contain"
+              src={logoSource}
+            />
+            <span className="truncate text-sm font-semibold text-zinc-100">
+              404
+            </span>
           </Link>
-          <Link className="text-sm text-zinc-400 transition hover:text-zinc-100" to="/gate">
+          <Link
+            className="text-sm text-zinc-400 transition hover:text-zinc-100"
+            to="/gate"
+          >
             返回入口
           </Link>
         </div>
@@ -103,7 +126,7 @@ export default function NotFound() {
             </div>
           </section>
 
-          <section className='absolute right-[31%] z-10 hidden h-40 w-55 md:top-20 xl:block'>
+          <section className="absolute right-[31%] z-10 hidden h-40 w-55 md:top-20 xl:block">
             <svg
               aria-hidden="true"
               className="absolute inset-0 h-full w-full text-white/65"
@@ -120,10 +143,12 @@ export default function NotFound() {
               />
             </svg>
             <div className="relative z-10 flex h-full flex-col px-6 py-5 text-left text-sm leading-6 text-white">
-              <div className="max-w-40">
-                您要找的页面似乎在某处消失了......
-              </div>
-              <img src={backIconModle} alt="卫图" className='mt-1 h-9 w-9  self-center'/>
+              <div className="max-w-40">您要找的页面似乎在某处消失了......</div>
+              <img
+                src={backIconModle}
+                alt="卫图"
+                className="mt-1 h-9 w-9  self-center"
+              />
             </div>
           </section>
         </div>

@@ -1,5 +1,5 @@
 /**
- * @parm 组件用途：展示主布局右侧功能入口和提示区。
+ * 主布局右侧的好友分页与私聊入口。
  */
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
@@ -9,6 +9,7 @@ import type { Friend } from '@/types/friends'
 import { logger } from '@/utils/logger'
 import { getUserDisplayName } from '@/utils/userDisplayName'
 
+/** 分页加载好友并展示私聊入口，搜索表单当前仅记录占位日志。 */
 export default function RightSidebar() {
   const pageSize = 8
   const [friendPage, setFriendPage] = useState(1)
@@ -19,7 +20,10 @@ export default function RightSidebar() {
     let cancelled = false
     async function loadFriends() {
       try {
-        const page = await friendsApi.listFriends({ page: friendPage, pageSize })
+        const page = await friendsApi.listFriends({
+          page: friendPage,
+          pageSize,
+        })
         if (cancelled) return
         setFriends(page.items)
         setHasMoreFriends(page.has_more)
@@ -71,7 +75,9 @@ export default function RightSidebar() {
                   alt={label}
                   className="mb-0.5 h-14 w-14 shrink-0 object-cover"
                 />
-                <span className="max-w-14 truncate text-xs font-medium leading-4 text-gray-300">{label}</span>
+                <span className="max-w-14 truncate text-xs font-medium leading-4 text-gray-300">
+                  {label}
+                </span>
               </Link>
             )
           })}

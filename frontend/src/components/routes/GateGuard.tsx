@@ -1,7 +1,9 @@
+/** 检查门禁状态，通过后渲染子路由，请求失败时跳转门禁页。 */
 import { useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { gateApi } from '@/api/gate'
 
+/** 检查门禁状态，通过后渲染子路由，请求失败时跳转门禁页。 */
 export default function GateGuard() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -22,7 +24,10 @@ export default function GateGuard() {
         if (!cancelled) {
           setGateAllowed(false)
           setGateChecked(true)
-          navigate('/gate', { replace: true, state: { from: location.pathname } })
+          navigate('/gate', {
+            replace: true,
+            state: { from: location.pathname },
+          })
         }
       }
     }

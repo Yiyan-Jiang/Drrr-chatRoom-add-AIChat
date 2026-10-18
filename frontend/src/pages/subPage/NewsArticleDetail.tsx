@@ -1,3 +1,4 @@
+/** 读取新闻 slug，并为对应新闻创建独立页面状态。 */
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ArticleToc from '@/features/news/ArticleToc'
@@ -8,9 +9,13 @@ import {
   getAllNewsDocuments,
   getNewsDocumentBySlug,
 } from '@/features/news/newsDocuments'
-import type { AdjacentNewsDocuments, NewsDocument } from '@/features/news/newsTypes'
+import type {
+  AdjacentNewsDocuments,
+  NewsDocument,
+} from '@/features/news/newsTypes'
 import logoSource from '@/assets/icon/Logo/logo.png'
 
+/** 格式化新闻日期，日期为空时展示未设置提示。 */
 function formatDate(value: string): string {
   if (!value) {
     return '未设置日期'
@@ -23,19 +28,27 @@ function formatDate(value: string): string {
   }).format(new Date(value))
 }
 
+/** 读取新闻 slug，并为对应新闻创建独立页面状态。 */
 export default function NewsArticleDetail() {
   const { slug } = useParams()
   return <NewsArticleContent key={slug} slug={slug} />
 }
 
-function NewsArticleContent({ slug }: { slug: string | undefined }) {
+/** 加载新闻正文与相邻文档，并管理目录、锚点和加载状态。 */
+function NewsArticleContent({
+  slug,
+}: {
+  /** 从路由读取的新闻标识。 */ slug: string | undefined
+}) {
   const [document, setDocument] = useState<NewsDocument | null>(null)
   const [adjacent, setAdjacent] = useState<AdjacentNewsDocuments>({
     previous: null,
     next: null,
   })
   const [isMobileTocOpen, setIsMobileTocOpen] = useState(false)
-  const [loadState, setLoadState] = useState<'loading' | 'success' | 'not-found' | 'error'>('loading')
+  const [loadState, setLoadState] = useState<
+    'loading' | 'success' | 'not-found' | 'error'
+  >('loading')
 
   useEffect(() => {
     let isCurrent = true
@@ -107,7 +120,11 @@ function NewsArticleContent({ slug }: { slug: string | undefined }) {
   }, [loadState, document?.slug])
 
   useEffect(() => {
-    if (loadState !== 'success' || !document || document.headings.length === 0) {
+    if (
+      loadState !== 'success' ||
+      !document ||
+      document.headings.length === 0
+    ) {
       return
     }
 
@@ -136,11 +153,10 @@ function NewsArticleContent({ slug }: { slug: string | undefined }) {
       window.history.replaceState(null, '', `#${encodeURIComponent(id)}`)
     }
 
-    const getHeadingElements = () => (
+    const getHeadingElements = () =>
       headingIds
         .map((id) => window.document.getElementById(id))
         .filter((heading): heading is HTMLElement => Boolean(heading))
-    )
 
     const updateActiveHeading = () => {
       const activeHeading = getHeadingElements()
@@ -249,113 +265,105 @@ function NewsArticleContent({ slug }: { slug: string | undefined }) {
   )
 
   if (loadState === 'loading') {
-    return (
-      shell(
-        <section className="mx-auto flex max-w-4xl flex-col gap-4">
-          <div className="rounded-lg border border-[#e2e2e3] bg-[#ffffff] px-4 py-8 text-center text-sm text-[#67676c]">
-            正在加载新闻文档...
-          </div>
-        </section>,
-      )
+    return shell(
+      <section className="mx-auto flex max-w-4xl flex-col gap-4">
+        <div className="rounded-lg border border-[#e2e2e3] bg-[#ffffff] px-4 py-8 text-center text-sm text-[#67676c]">
+          正在加载新闻文档...
+        </div>
+      </section>,
     )
   }
 
   if (loadState === 'error') {
-    return (
-      shell(
-        <section className="mx-auto flex max-w-4xl flex-col gap-4">
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-5 text-sm text-red-700">
-            无法加载新闻文档。
-          </div>
-        </section>,
-      )
+    return shell(
+      <section className="mx-auto flex max-w-4xl flex-col gap-4">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-5 text-sm text-red-700">
+          无法加载新闻文档。
+        </div>
+      </section>,
     )
   }
 
   if (!document) {
-    return (
-      shell(
-        <section className="mx-auto flex max-w-4xl flex-col gap-4">
-          <div className="rounded-lg border border-[#e2e2e3] bg-[#ffffff] px-4 py-8 text-center text-sm text-[#67676c]">
-            没有找到这篇新闻文档。
-          </div>
-        </section>,
-      )
+    return shell(
+      <section className="mx-auto flex max-w-4xl flex-col gap-4">
+        <div className="rounded-lg border border-[#e2e2e3] bg-[#ffffff] px-4 py-8 text-center text-sm text-[#67676c]">
+          没有找到这篇新闻文档。
+        </div>
+      </section>,
     )
   }
 
-  return (
-    shell(
-      <section className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-5 sm:px-6">
-        <Link
-          className="w-fit text-sm font-medium text-[#3451b2] transition hover:text-[#213547]"
-          to="/home/news"
-        >
-          返回新闻流
-        </Link>
+  return shell(
+    <section className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-5 sm:px-6">
+      <Link
+        className="w-fit text-sm font-medium text-[#3451b2] transition hover:text-[#213547]"
+        to="/home/news"
+      >
+        返回新闻流
+      </Link>
 
-        <article className="rounded-xl border border-[#e2e2e3] bg-[#ffffff] px-5 py-6 shadow-sm sm:px-8">
-          <header className="border-b border-[#e2e2e3] pb-6">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-[#67676c]">
-              <span>{formatDate(document.date)}</span>
-              <span>by {document.author}</span>
-              {document.category && (
-                <span className="rounded-full bg-[#f6f6f7] px-2 py-0.5 text-[#3c3c43]">
-                  {document.category}
-                </span>
-              )}
-            </div>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-[#213547]">
-              {document.title}
-            </h1>
-            {document.tags.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {document.tags.map((tag) => (
-                  <span
-                    className="rounded-full border border-[#e2e2e3] bg-[#f6f6f7] px-2 py-0.5 text-xs text-[#67676c]"
-                    key={tag}
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
+      <article className="rounded-xl border border-[#e2e2e3] bg-[#ffffff] px-5 py-6 shadow-sm sm:px-8">
+        <header className="border-b border-[#e2e2e3] pb-6">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[#67676c]">
+            <span>{formatDate(document.date)}</span>
+            <span>by {document.author}</span>
+            {document.category && (
+              <span className="rounded-full bg-[#f6f6f7] px-2 py-0.5 text-[#3c3c43]">
+                {document.category}
+              </span>
             )}
-          </header>
-
-          <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_220px]">
-            <MarkdownArticle document={document} />
-            <aside className="hidden lg:sticky lg:top-5 lg:block lg:self-start">
-              <ArticleToc headings={document.headings} />
-            </aside>
           </div>
-        </article>
-
-        <nav className="grid gap-3 sm:grid-cols-2">
-          {adjacent.previous ? (
-            <Link
-              className="rounded-lg border border-[#e2e2e3] bg-[#ffffff] p-3 text-sm text-[#3c3c43] shadow-sm transition hover:border-[#3451b2] hover:text-[#3451b2]"
-              to={`/news/${adjacent.previous.slug}`}
-            >
-              <span className="block text-xs text-[#67676c]">上一篇</span>
-              {adjacent.previous.title}
-            </Link>
-          ) : (
-            <div />
+          <h1 className="mt-4 text-3xl font-bold tracking-tight text-[#213547]">
+            {document.title}
+          </h1>
+          {document.tags.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {document.tags.map((tag) => (
+                <span
+                  className="rounded-full border border-[#e2e2e3] bg-[#f6f6f7] px-2 py-0.5 text-xs text-[#67676c]"
+                  key={tag}
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
           )}
+        </header>
 
-          {adjacent.next ? (
-            <Link
-              className="rounded-lg border border-[#e2e2e3] bg-[#ffffff] p-3 text-right text-sm text-[#3c3c43] shadow-sm transition hover:border-[#3451b2] hover:text-[#3451b2]"
-              to={`/news/${adjacent.next.slug}`}
-            >
-              <span className="block text-xs text-[#67676c]">下一篇</span>
-              {adjacent.next.title}
-            </Link>
-          ) : (
-            <div />
-          )}
-        </nav>
-      </section>,
-    )
+        <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_220px]">
+          <MarkdownArticle document={document} />
+          <aside className="hidden lg:sticky lg:top-5 lg:block lg:self-start">
+            <ArticleToc headings={document.headings} />
+          </aside>
+        </div>
+      </article>
+
+      <nav className="grid gap-3 sm:grid-cols-2">
+        {adjacent.previous ? (
+          <Link
+            className="rounded-lg border border-[#e2e2e3] bg-[#ffffff] p-3 text-sm text-[#3c3c43] shadow-sm transition hover:border-[#3451b2] hover:text-[#3451b2]"
+            to={`/news/${adjacent.previous.slug}`}
+          >
+            <span className="block text-xs text-[#67676c]">上一篇</span>
+            {adjacent.previous.title}
+          </Link>
+        ) : (
+          <div />
+        )}
+
+        {adjacent.next ? (
+          <Link
+            className="rounded-lg border border-[#e2e2e3] bg-[#ffffff] p-3 text-right text-sm text-[#3c3c43] shadow-sm transition hover:border-[#3451b2] hover:text-[#3451b2]"
+            to={`/news/${adjacent.next.slug}`}
+          >
+            <span className="block text-xs text-[#67676c]">下一篇</span>
+            {adjacent.next.title}
+          </Link>
+        ) : (
+          <div />
+        )}
+      </nav>
+    </section>,
   )
 }

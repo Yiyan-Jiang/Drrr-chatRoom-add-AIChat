@@ -1,7 +1,9 @@
-import RoomList from '@/components/room/RoomList';
-import RoomCreatePanel from '@/components/room/RoomCreatePanel';
-import { useRooms } from '@/hooks/useRooms';
+/** 连接房间列表状态与建房表单，将筛选、刷新和创建操作交给房间 Hook。 */
+import RoomList from '@/components/room/RoomList'
+import RoomCreatePanel from '@/components/room/RoomCreatePanel'
+import { useRooms } from '@/hooks/useRooms'
 
+/** 连接房间列表状态与建房表单，将筛选、刷新和创建操作交给房间 Hook。 */
 export default function RoomSelect() {
   const {
     rooms,
@@ -27,7 +29,7 @@ export default function RoomSelect() {
     submitSearch,
     fetchRooms,
     createRoom,
-  } = useRooms();
+  } = useRooms()
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden p-0">
@@ -61,5 +63,5 @@ export default function RoomSelect() {
         onCreateRoom={createRoom}
       />
     </div>
-  );
+  )
 }

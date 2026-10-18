@@ -1,7 +1,11 @@
+/** 帖子互动计数配套的 SVG 图标。 */
+/** 帖子互动图标的样式配置。 */
 type IconProps = {
+  /** 附加到图标默认尺寸类之后的样式类。 */
   className?: string
 }
 
+/** 渲染使用当前文字颜色描边的点赞图标。 */
 export function LikeIcon({ className = '' }: IconProps) {
   return (
     <svg
@@ -22,6 +26,7 @@ export function LikeIcon({ className = '' }: IconProps) {
   )
 }
 
+/** 渲染使用当前文字颜色描边的收藏图标。 */
 export function FavoriteIcon({ className = '' }: IconProps) {
   return (
     <svg
@@ -39,6 +44,7 @@ export function FavoriteIcon({ className = '' }: IconProps) {
   )
 }
 
+/** 渲染使用当前文字颜色描边的评论图标。 */
 export function CommentIcon({ className = '' }: IconProps) {
   return (
     <svg

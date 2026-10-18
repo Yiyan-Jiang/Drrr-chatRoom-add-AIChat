@@ -1,7 +1,12 @@
+/** 组装认证上下文、页面路由出口和全局消息提示。 */
 import { Outlet } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { Toaster } from 'react-hot-toast'
 
+/**
+ * 渲染应用级认证容器、路由出口和 toast 提示。
+ * @returns 应用根组件。
+ */
 function App() {
   return (
     <AuthProvider>

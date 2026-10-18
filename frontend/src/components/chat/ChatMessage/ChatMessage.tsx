@@ -1,26 +1,35 @@
 /**
- * @parm 组件用途：展示旧版普通聊天消息气泡。
+ * 展示旧版普通聊天消息气泡。
  */
-import type { Message } from '@/types/chat';
+import type { Message } from '@/types/chat'
 
+/** 旧版消息气泡的内容与归属。 */
 interface ChatMessageProps {
-  message: Message;
-  isOwn: boolean;
-  username?: string;
+  /** 待展示的消息。 */
+  message: Message
+  /** 是否为当前用户的消息，控制左右布局。 */
+  isOwn: boolean
+  /** 对方显示名，缺省时根据用户 ID 生成名称。 */
+  username?: string
 }
 
-export default function ChatMessage({ message, isOwn, username }: ChatMessageProps) {
+/** 按消息归属排列旧版消息气泡，展示发送时间与对方名称。 */
+export default function ChatMessage({
+  message,
+  isOwn,
+  username,
+}: ChatMessageProps) {
   const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
+    const date = new Date(dateString)
     return date.toLocaleTimeString('zh-CN', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
-    });
-  };
+    })
+  }
 
-  const displayName = isOwn ? '你' : username || `用户${message.user_id}`;
-  const avatarEmoji = '👤';
+  const displayName = isOwn ? '你' : username || `用户${message.user_id}`
+  const avatarEmoji = '👤'
 
   if (isOwn) {
     return (
@@ -39,7 +48,7 @@ export default function ChatMessage({ message, isOwn, username }: ChatMessagePro
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -59,5 +68,5 @@ export default function ChatMessage({ message, isOwn, username }: ChatMessagePro
         </div>
       </div>
     </div>
-  );
+  )
 }

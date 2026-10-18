@@ -1,1 +1,1 @@
-"""Offline migration helpers for normal-system legacy databases."""
+"""提供普通业务旧版数据库的离线迁移辅助能力。"""

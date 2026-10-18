@@ -1,24 +1,36 @@
+/** 在打开时挂载房间资料面板，并以房间 ID 区分面板的本地编辑状态。 */
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import toast from 'react-hot-toast'
 import { images } from '@/assets/assets'
 import type { RoomWithMessages, UpdateRoomRequest } from '@/types/chat'
 import { getUserDisplayName } from '@/utils/userDisplayName'
 
+/** 房间资料编辑表单，要求提供更新请求中的所有字段。 */
 type RoomInfoForm = Required<UpdateRoomRequest>
 
+/** 房间资料、操作状态与更新回调。 */
 interface RoomInfoDrawerProps {
+  /** 是否挂载房间资料面板。 */
   open: boolean
+  /** 当前房间详情，包含房主与规则资料。 */
   room: RoomWithMessages
+  /** 当前用户 ID，用于控制房主操作入口。 */
   currentUserId?: number
+  /** 删除请求中标记，用于禁用相关操作。 */
   deletingRoom?: boolean
+  /** 更新请求中标记，用于禁用保存按钮。 */
   updatingRoom?: boolean
+  /** 关闭资料面板。 */
   onClose: () => void
+  /** 删除当前房间，失败时可抛出错误供面板提示。 */
   onDeleteRoom: () => Promise<void> | void
+  /** 保存所有资料字段，失败时抛出错误以恢复编辑并提示。 */
   onUpdateRoom: (data: RoomInfoForm) => Promise<void>
 }
 
 const roomNamePattern = /^[\u4e00-\u9fa5A-Za-z0-9_]{1,8}$/
 
+/** 从房间详情建立编辑副本，将缺省文本字段转换为空字符串。 */
 function toForm(room: RoomWithMessages): RoomInfoForm {
   return {
     name: room.name ?? '',
@@ -28,6 +40,7 @@ function toForm(room: RoomWithMessages): RoomInfoForm {
   }
 }
 
+/** 仅去除房间名与简介的首尾空白，保留说明和规则的原始排版。 */
 function normalizeForm(form: RoomInfoForm): RoomInfoForm {
   return {
     name: form.name.trim(),
@@ -37,6 +50,7 @@ function normalizeForm(form: RoomInfoForm): RoomInfoForm {
   }
 }
 
+/** 按浏览器本地时区展示房间创建日期与时分。 */
 function formatRoomDate(value: string) {
   return new Date(value).toLocaleString('zh-CN', {
     year: 'numeric',
@@ -47,39 +61,53 @@ function formatRoomDate(value: string) {
   })
 }
 
+/** 将房间编号补零至至少三位。 */
 function formatRoomId(id: number) {
   return String(id).padStart(3, '0')
 }
 
+/** 展示房间资料中的带标题内容分区。 */
 function Section({
   title,
   icon,
   children,
   className = '',
 }: {
+  /** 分区标题。 */
   title: string
+  /** 标题或统计项图标。 */
   icon?: ReactNode
+  /** 分区或标签内容。 */
   children: ReactNode
+  /** 附加样式类。 */
   className?: string
 }) {
   return (
-    <section className={`rounded-lg border border-white/10 bg-white/[0.03] ${className}`}>
+    <section
+      className={`rounded-lg border border-white/10 bg-white/[0.03] ${className}`}
+    >
       <div className="flex items-center gap-2 border-b border-white/5 px-4 py-3">
         {icon ? <span className="text-zinc-300">{icon}</span> : null}
         <h3 className="text-sm font-semibold text-zinc-100">{title}</h3>
       </div>
-      <div className="px-4 py-4 text-sm leading-6 text-zinc-200">{children}</div>
+      <div className="px-4 py-4 text-sm leading-6 text-zinc-200">
+        {children}
+      </div>
     </section>
   )
 }
 
+/** 展示房间统计项的图标、标签和值。 */
 function StatItem({
   icon,
   label,
   value,
 }: {
+  /** 标题或统计项图标。 */
   icon: ReactNode
+  /** 统计项标签。 */
   label: string
+  /** 统计项展示值。 */
   value: ReactNode
 }) {
   return (
@@ -89,13 +117,16 @@ function StatItem({
       </div>
       <div className="min-w-0">
         <div className="text-xs text-zinc-400">{label}</div>
-        <div className="truncate text-lg font-semibold text-zinc-100">{value}</div>
+        <div className="truncate text-lg font-semibold text-zinc-100">
+          {value}
+        </div>
       </div>
     </div>
   )
 }
 
-function Badge({ children }: { children: ReactNode }) {
+/** 展示房间标签或简要属性。 */
+function Badge({ children }: { /** 分区或标签内容。 */ children: ReactNode }) {
   return (
     <span className="inline-flex items-center rounded-md border border-white/15 bg-black/35 px-3 py-1 text-xs text-zinc-100">
       {children}
@@ -103,23 +134,46 @@ function Badge({ children }: { children: ReactNode }) {
   )
 }
 
-function BubbleIcon({ className = '' }: { className?: string }) {
+function BubbleIcon({
+  className = '',
+}: {
+  /** 附加样式类。 */ className?: string
+}) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
       <path
         d="M12 20c5 0 9-3.58 9-8s-4-8-9-8-9 3.58-9 8c0 2.04.87 3.9 2.32 5.31-.31 1.03-.85 2.19-1.63 3.46 2.08-.08 3.79-.56 5.11-1.41 1.02.4 2.16.64 3.2.64Z"
         stroke="currentColor"
         strokeWidth="1.6"
         strokeLinejoin="round"
       />
-      <path d="M9 11.8h.01M12 11.8h.01M15 11.8h.01" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+      <path
+        d="M9 11.8h.01M12 11.8h.01M15 11.8h.01"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
     </svg>
   )
 }
 
-function UserIcon({ className = '' }: { className?: string }) {
+function UserIcon({
+  className = '',
+}: {
+  /** 附加样式类。 */ className?: string
+}) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
       <path
         d="M20 21a8 8 0 10-16 0"
         stroke="currentColor"
@@ -136,38 +190,112 @@ function UserIcon({ className = '' }: { className?: string }) {
   )
 }
 
-function TrendIcon({ className = '' }: { className?: string }) {
+function TrendIcon({
+  className = '',
+}: {
+  /** 附加样式类。 */ className?: string
+}) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path d="M4 17l6-6 4 4 6-8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M14 7h6v6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        d="M4 17l6-6 4 4 6-8"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14 7h6v6"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   )
 }
 
-function ChartIcon({ className = '' }: { className?: string }) {
+function ChartIcon({
+  className = '',
+}: {
+  /** 附加样式类。 */ className?: string
+}) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path d="M4 19h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M7 19V10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M12 19V5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M17 19v-8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        d="M4 19h16"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M7 19V10"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 19V5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M17 19v-8"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
     </svg>
   )
 }
 
-function ClockIcon({ className = '' }: { className?: string }) {
+function ClockIcon({
+  className = '',
+}: {
+  /** 附加样式类。 */ className?: string
+}) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
       <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M12 8v4l3 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M12 8v4l3 2"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   )
 }
 
-function TagIcon({ className = '' }: { className?: string }) {
+function TagIcon({
+  className = '',
+}: {
+  /** 附加样式类。 */ className?: string
+}) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
       <path
         d="M4 11.5V6.8c0-.44.17-.86.48-1.17l1.15-1.15c.31-.31.73-.48 1.17-.48H11l6.8 6.8c.8.8.8 2.09 0 2.89l-5.4 5.4c-.8.8-2.09.8-2.89 0L4 11.5Z"
         stroke="currentColor"
@@ -179,56 +307,122 @@ function TagIcon({ className = '' }: { className?: string }) {
   )
 }
 
-function ShieldIcon({ className = '' }: { className?: string }) {
+function ShieldIcon({
+  className = '',
+}: {
+  /** 附加样式类。 */ className?: string
+}) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
       <path
         d="M12 3 5 6v5c0 4.9 3.15 8.96 7 10 3.85-1.04 7-5.1 7-10V6l-7-3Z"
         stroke="currentColor"
         strokeWidth="1.6"
         strokeLinejoin="round"
       />
-      <path d="M9.5 12.2l1.8 1.8 3.8-4.1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M9.5 12.2l1.8 1.8 3.8-4.1"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   )
 }
 
-function PencilIcon({ className = '' }: { className?: string }) {
+function PencilIcon({
+  className = '',
+}: {
+  /** 附加样式类。 */ className?: string
+}) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
       <path
         d="M4 16.5V20h3.5L18.4 9.1a1.8 1.8 0 0 0 0-2.6l-.9-.9a1.8 1.8 0 0 0-2.6 0L4 16.5Z"
         stroke="currentColor"
         strokeWidth="1.6"
         strokeLinejoin="round"
       />
-      <path d="M13.2 6.8 17.2 10.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path
+        d="M13.2 6.8 17.2 10.8"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
     </svg>
   )
 }
 
-function TrashIcon({ className = '' }: { className?: string }) {
+function TrashIcon({
+  className = '',
+}: {
+  /** 附加样式类。 */ className?: string
+}) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path d="M5 7h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M9 7V5.8c0-.99.8-1.8 1.8-1.8h2.4c1 0 1.8.81 1.8 1.8V7" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M8 7l.7 12h6.6L16 7" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        d="M5 7h14"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9 7V5.8c0-.99.8-1.8 1.8-1.8h2.4c1 0 1.8.81 1.8 1.8V7"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M8 7l.7 12h6.6L16 7"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
     </svg>
   )
 }
 
-function XIcon({ className = '' }: { className?: string }) {
+function XIcon({ className = '' }: { /** 附加样式类。 */ className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        d="M6 6l12 12M18 6 6 18"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
     </svg>
   )
 }
 
+/** 在打开时挂载房间资料面板，并以房间 ID 区分面板的本地编辑状态。 */
 export default function RoomInfoDrawer(props: RoomInfoDrawerProps) {
-  return props.open ? <RoomInfoDrawerContent key={props.room.id} {...props} /> : null
+  return props.open ? (
+    <RoomInfoDrawerContent key={props.room.id} {...props} />
+  ) : null
 }
 
+/** 管理单个房间的编辑副本、放弃确认和更新或删除结果提示。 */
 function RoomInfoDrawerContent({
   open,
   room,
@@ -250,7 +444,8 @@ function RoomInfoDrawerContent({
     normalizedForm.rules !== (room.rules ?? '')
 
   const isOwner = room.owner_id === currentUserId
-  const ownerName = room.owner?.username || (room.owner_id ? `user${room.owner_id}` : '未知')
+  const ownerName =
+    room.owner?.username || (room.owner_id ? `user${room.owner_id}` : '未知')
   const displayOwnerName = getUserDisplayName(room.owner, ownerName)
   const roomTags = room.tags.length > 0 ? room.tags : ['杂谈']
   const currentTitle = editing ? normalizedForm.name || '未命名房间' : room.name
@@ -260,7 +455,12 @@ function RoomInfoDrawerContent({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
-      if (editing && hasChanges && !window.confirm('有未保存的修改，确认放弃吗？')) return
+      if (
+        editing &&
+        hasChanges &&
+        !window.confirm('有未保存的修改，确认放弃吗？')
+      )
+        return
       setEditing(false)
       onClose()
     }
@@ -273,7 +473,12 @@ function RoomInfoDrawerContent({
 
   const handleClose = () => {
     if (deletingRoom) return
-    if (editing && hasChanges && !window.confirm('有未保存的修改，确认放弃吗？')) return
+    if (
+      editing &&
+      hasChanges &&
+      !window.confirm('有未保存的修改，确认放弃吗？')
+    )
+      return
     setEditing(false)
     onClose()
   }
@@ -299,7 +504,8 @@ function RoomInfoDrawerContent({
     } catch (error) {
       setForm(toForm(room))
       setEditing(true)
-      const message = error instanceof Error ? error.message : '更新房间信息失败'
+      const message =
+        error instanceof Error ? error.message : '更新房间信息失败'
       window.alert(message)
     }
   }
@@ -320,7 +526,10 @@ function RoomInfoDrawerContent({
   }
 
   return (
-    <div className="fixed inset-0 z-40 bg-black/75 px-4 py-6 backdrop-blur-sm" onClick={handleClose}>
+    <div
+      className="fixed inset-0 z-40 bg-black/75 px-4 py-6 backdrop-blur-sm"
+      onClick={handleClose}
+    >
       <section
         role="dialog"
         aria-modal="true"
@@ -329,7 +538,9 @@ function RoomInfoDrawerContent({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="relative flex items-center justify-center border-b border-white/10 px-5 py-4">
-          <div className="text-lg font-medium tracking-wide text-zinc-100">房间介绍</div>
+          <div className="text-lg font-medium tracking-wide text-zinc-100">
+            房间介绍
+          </div>
           <button
             type="button"
             disabled={deletingRoom}
@@ -365,11 +576,17 @@ function RoomInfoDrawerContent({
 
                   <div className="flex items-end justify-between gap-4 text-white">
                     <div className="min-w-0">
-                      <div className="text-3xl font-semibold tracking-[0.2em]">#{formatRoomId(room.id)}</div>
+                      <div className="text-3xl font-semibold tracking-[0.2em]">
+                        #{formatRoomId(room.id)}
+                      </div>
                       <div className="mt-2 text-sm text-white/70">房间编号</div>
                     </div>
                     <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/45 text-white/90">
-                      <img src={images.ChatBubble} alt="" className="h-9 w-9 object-contain opacity-90" />
+                      <img
+                        src={images.ChatBubble}
+                        alt=""
+                        className="h-9 w-9 object-contain opacity-90"
+                      />
                     </div>
                   </div>
                 </div>
@@ -386,12 +603,19 @@ function RoomInfoDrawerContent({
                     <input
                       value={form.name}
                       maxLength={8}
-                      onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          name: event.target.value,
+                        }))
+                      }
                       className="w-full border-0 border-b border-white/15 bg-transparent px-0 pb-2 text-[28px] font-semibold text-white outline-none ring-0 placeholder:text-zinc-600 focus:border-white/40"
                       autoFocus
                     />
                   ) : (
-                    <h2 className="truncate text-[28px] font-semibold text-white">{currentTitle}</h2>
+                    <h2 className="truncate text-[28px] font-semibold text-white">
+                      {currentTitle}
+                    </h2>
                   )}
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <Badge>{roomTags[0]}</Badge>
@@ -406,7 +630,12 @@ function RoomInfoDrawerContent({
                   <input
                     value={form.description}
                     maxLength={20}
-                    onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        description: event.target.value,
+                      }))
+                    }
                     className="w-full border-0 border-b border-white/15 bg-transparent px-0 pb-2 text-base text-zinc-100 outline-none ring-0 placeholder:text-zinc-600 focus:border-white/40"
                   />
                 ) : (
@@ -416,10 +645,26 @@ function RoomInfoDrawerContent({
 
               <div className="overflow-hidden rounded-lg border border-white/10 bg-white/[0.03]">
                 <div className="grid divide-x divide-white/10 sm:grid-cols-2 xl:grid-cols-4">
-                  <StatItem icon={<UserIcon className="h-5 w-5" />} label="当前成员" value={`${room.online_members ?? 0} / ${room.max_members}`} />
-                  <StatItem icon={<TrendIcon className="h-5 w-5" />} label="最大人数" value={room.max_members} />
-                  <StatItem icon={<ChartIcon className="h-5 w-5" />} label="累计参与者" value={room.peak_online_members} />
-                  <StatItem icon={<ClockIcon className="h-5 w-5" />} label="创建日期" value={formatRoomDate(room.created_at)} />
+                  <StatItem
+                    icon={<UserIcon className="h-5 w-5" />}
+                    label="当前成员"
+                    value={`${room.online_members ?? 0} / ${room.max_members}`}
+                  />
+                  <StatItem
+                    icon={<TrendIcon className="h-5 w-5" />}
+                    label="最大人数"
+                    value={room.max_members}
+                  />
+                  <StatItem
+                    icon={<ChartIcon className="h-5 w-5" />}
+                    label="累计参与者"
+                    value={room.peak_online_members}
+                  />
+                  <StatItem
+                    icon={<ClockIcon className="h-5 w-5" />}
+                    label="创建日期"
+                    value={formatRoomDate(room.created_at)}
+                  />
                 </div>
               </div>
             </div>
@@ -428,7 +673,11 @@ function RoomInfoDrawerContent({
           <div className="grid gap-4">
             <Section
               title="房间说明"
-              icon={<span className="inline-flex h-5 w-5 items-center justify-center text-base leading-none">▤</span>}
+              icon={
+                <span className="inline-flex h-5 w-5 items-center justify-center text-base leading-none">
+                  ▤
+                </span>
+              }
             >
               {editing ? (
                 <div className="space-y-2">
@@ -436,40 +685,52 @@ function RoomInfoDrawerContent({
                     value={form.notice}
                     maxLength={200}
                     rows={4}
-                    onChange={(event) => setForm((current) => ({ ...current, notice: event.target.value }))}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        notice: event.target.value,
+                      }))
+                    }
                     className="min-h-[120px] w-full resize-none border border-white/10 bg-black/40 px-3 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-white/30"
                   />
-                  <div className="text-xs text-zinc-500">{form.notice.length}/200</div>
+                  <div className="text-xs text-zinc-500">
+                    {form.notice.length}/200
+                  </div>
                 </div>
               ) : (
-                <div className="whitespace-pre-wrap text-zinc-200">{room.notice || '暂无说明'}</div>
+                <div className="whitespace-pre-wrap text-zinc-200">
+                  {room.notice || '暂无说明'}
+                </div>
               )}
             </Section>
 
-            <Section
-              title="房间规则"
-              icon={<ShieldIcon className="h-5 w-5" />}
-            >
+            <Section title="房间规则" icon={<ShieldIcon className="h-5 w-5" />}>
               {editing ? (
                 <div className="space-y-2">
                   <textarea
                     value={form.rules}
                     maxLength={200}
                     rows={4}
-                    onChange={(event) => setForm((current) => ({ ...current, rules: event.target.value }))}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        rules: event.target.value,
+                      }))
+                    }
                     className="min-h-[120px] w-full resize-none border border-white/10 bg-black/40 px-3 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-white/30"
                   />
-                  <div className="text-xs text-zinc-500">{form.rules.length}/200</div>
+                  <div className="text-xs text-zinc-500">
+                    {form.rules.length}/200
+                  </div>
                 </div>
               ) : (
-                <div className="whitespace-pre-wrap text-zinc-200">{room.rules || '暂无规则'}</div>
+                <div className="whitespace-pre-wrap text-zinc-200">
+                  {room.rules || '暂无规则'}
+                </div>
               )}
             </Section>
 
-            <Section
-              title="房间标签"
-              icon={<TagIcon className="h-5 w-5" />}
-            >
+            <Section title="房间标签" icon={<TagIcon className="h-5 w-5" />}>
               <div className="flex flex-wrap gap-2">
                 {roomTags.map((tag) => (
                   <Badge key={tag}>{tag}</Badge>
@@ -501,7 +762,7 @@ function RoomInfoDrawerContent({
                       className="inline-flex h-12 flex-1 items-center justify-center gap-2 border border-white/15 bg-black/30 px-4 text-sm font-medium text-zinc-100 transition hover:border-white/30 disabled:cursor-not-allowed disabled:text-zinc-600"
                     >
                       取消
-                      </button>
+                    </button>
                   </>
                 ) : (
                   <>

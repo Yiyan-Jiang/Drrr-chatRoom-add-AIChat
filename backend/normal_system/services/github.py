@@ -1,9 +1,12 @@
+"""将 GitHub Issues 与评论转换为前端使用的字段结构。"""
+
 from typing import Any
 
 from normal_system.integrations import github as client
 
 
 def _map_issue(issue: dict[str, Any]) -> dict[str, Any]:
+    """将 GitHub issue 响应映射为留言板展示字段。"""
     user = issue.get("user") or {}
     return {
         "id": issue["id"],
@@ -24,6 +27,7 @@ def _map_issue(issue: dict[str, Any]) -> dict[str, Any]:
 
 
 def _map_comment(comment: dict[str, Any]) -> dict[str, Any]:
+    """将 GitHub 评论响应映射为留言板展示字段。"""
     user = comment.get("user") or {}
     return {
         "id": comment["id"],
@@ -40,6 +44,7 @@ def _map_comment(comment: dict[str, Any]) -> dict[str, Any]:
 
 
 async def list_github_issues() -> list[dict[str, Any]]:
+    """请求最近更新的 GitHub issues，过滤 pull request 后返回展示数据。"""
     owner, repo = client._github_repository()
     url = f"https://api.github.com/repos/{owner}/{repo}/issues"
 
@@ -52,14 +57,11 @@ async def list_github_issues() -> list[dict[str, Any]]:
             "direction": "desc",
         },
     )
-    return [
-        _map_issue(issue)
-        for issue in issues
-        if not issue.get("pull_request")
-    ]
+    return [_map_issue(issue) for issue in issues if not issue.get("pull_request")]
 
 
 async def get_github_issue(issue_number: int) -> dict[str, Any]:
+    """请求指定 issue 并映射展示数据；pull request 按不存在处理。"""
     owner, repo = client._github_repository()
     url = f"https://api.github.com/repos/{owner}/{repo}/issues/{issue_number}"
     issue = await client._get_json_from_github(url)
@@ -72,6 +74,7 @@ async def get_github_issue(issue_number: int) -> dict[str, Any]:
 
 
 async def list_github_issue_comments(issue_number: int) -> list[dict[str, Any]]:
+    """请求指定 issue 的评论并映射展示数据。"""
     owner, repo = client._github_repository()
     url = f"https://api.github.com/repos/{owner}/{repo}/issues/{issue_number}/comments"
     comments = await client._get_json_from_github(

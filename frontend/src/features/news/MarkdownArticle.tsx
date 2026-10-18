@@ -1,11 +1,19 @@
+/** 渲染动态文章正文，并为标题添加目录锚点与章节链接。 */
 import type { Components } from 'react-markdown'
 import { MarkdownRenderer } from './markdownRenderer'
 import type { NewsDocument } from './newsTypes'
 
+/** 动态文章正文组件的输入属性。 */
 interface MarkdownArticleProps {
+  /** 包含正文和标题锚点的动态文章。 */
   document: NewsDocument
 }
 
+/**
+ * 渲染动态文章正文，并使用解析出的目录编号设置标题锚点。
+ * @param props - 完整文章文档。
+ * @returns 正文排版组件。
+ */
 export default function MarkdownArticle({ document }: MarkdownArticleProps) {
   const components: Components = {
     h2: ({ children, id }) => {

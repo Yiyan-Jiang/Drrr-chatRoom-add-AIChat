@@ -1,3 +1,5 @@
+"""集中导出聊天室业务请求与响应的数据结构。"""
+
 from normal_system.schemas.auth import LoginRequest, LoginResponse
 from normal_system.schemas.friend import (
     FriendInDB,

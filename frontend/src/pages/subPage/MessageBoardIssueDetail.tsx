@@ -1,3 +1,4 @@
+/** 读取路由中的 Issue 编号，并为对应详情创建独立页面状态。 */
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { githubIssuesApi } from '@/api'
@@ -5,8 +6,10 @@ import type { MessageBoardIssue, MessageBoardIssueComment } from '@/api'
 import { MarkdownRenderer } from '@/features/news/markdownRenderer'
 import logoSource from '@/assets/icon/Logo/logo.png'
 
+/** 页面请求的空闲、加载、成功和失败状态。 */
 type LoadState = 'idle' | 'loading' | 'success' | 'error'
 
+/** 将 Issue 详情时间格式化为中文日期与时分。 */
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
@@ -17,10 +20,12 @@ function formatDate(value: string): string {
   }).format(new Date(value))
 }
 
+/** 根据 GitHub 响应状态生成详情加载失败提示。 */
 function getErrorMessage(error: unknown): string {
-  const status = typeof error === 'object' && error !== null && 'response' in error
-    ? (error as { response?: { status?: number } }).response?.status
-    : undefined
+  const status =
+    typeof error === 'object' && error !== null && 'response' in error
+      ? (error as { response?: { status?: number } }).response?.status
+      : undefined
 
   if (status === 403) {
     return 'GitHub API 请求次数暂时受限，请稍后再试。'
@@ -33,7 +38,12 @@ function getErrorMessage(error: unknown): string {
   return '暂时无法连接 GitHub，请稍后重试。'
 }
 
-function MarkdownBody({ body }: { body: string }) {
+/** 渲染 Issue 正文的 Markdown 内容区域。 */
+function MarkdownBody({
+  body,
+}: {
+  /** 需要渲染的 Markdown 正文。 */ body: string
+}) {
   if (!body) {
     return <p className="text-sm text-[#67676c]">没有正文。</p>
   }
@@ -45,17 +55,33 @@ function MarkdownBody({ body }: { body: string }) {
   )
 }
 
+/** 读取路由中的 Issue 编号，并为对应详情创建独立页面状态。 */
 export default function MessageBoardIssueDetail() {
   const { issueNumber } = useParams()
-  return <IssueDetailContent key={issueNumber} parsedIssueNumber={Number(issueNumber)} />
+  return (
+    <IssueDetailContent
+      key={issueNumber}
+      parsedIssueNumber={Number(issueNumber)}
+    />
+  )
 }
 
-function IssueDetailContent({ parsedIssueNumber }: { parsedIssueNumber: number }) {
-  const isValidIssueNumber = Number.isInteger(parsedIssueNumber) && parsedIssueNumber > 0
+/** 校验 Issue 编号并加载、展示对应详情。 */
+function IssueDetailContent({
+  parsedIssueNumber,
+}: {
+  /** 从路由解析得到的 Issue 编号。 */ parsedIssueNumber: number
+}) {
+  const isValidIssueNumber =
+    Number.isInteger(parsedIssueNumber) && parsedIssueNumber > 0
   const [issue, setIssue] = useState<MessageBoardIssue | null>(null)
   const [comments, setComments] = useState<MessageBoardIssueComment[]>([])
-  const [loadState, setLoadState] = useState<LoadState>(isValidIssueNumber ? 'loading' : 'error')
-  const [errorMessage, setErrorMessage] = useState(isValidIssueNumber ? '' : 'Issue 编号无效。')
+  const [loadState, setLoadState] = useState<LoadState>(
+    isValidIssueNumber ? 'loading' : 'error',
+  )
+  const [errorMessage, setErrorMessage] = useState(
+    isValidIssueNumber ? '' : 'Issue 编号无效。',
+  )
 
   const loadIssue = useCallback(() => {
     if (!Number.isInteger(parsedIssueNumber) || parsedIssueNumber <= 0) return

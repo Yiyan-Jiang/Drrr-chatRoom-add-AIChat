@@ -1,3 +1,5 @@
+"""提供 Uvicorn 使用的统一 ASGI 入口。"""
+
 from app_factory import socketio_app
 
 

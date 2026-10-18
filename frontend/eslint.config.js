@@ -1,3 +1,4 @@
+/** 为前端 TypeScript 与 React 文件组合现有 ESLint 检查，并忽略构建目录。 */
 import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'

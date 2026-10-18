@@ -1,1 +1,1 @@
-"""Normal backend system package."""
+"""组织普通用户、房间、消息、好友和帖子业务。"""

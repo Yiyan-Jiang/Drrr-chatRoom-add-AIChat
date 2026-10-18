@@ -1,29 +1,49 @@
 /**
- * @parm 组件用途：展示并编辑当前用户的头像、昵称、简介和账号操作入口。
+ * 展示并编辑当前用户的头像、昵称、简介和账号操作入口。
  */
 import { useEffect, useState } from 'react'
-import { chatAvatarCatalog, resolveChatAvatarAssets } from '@/assets/chatAvatarCatalog'
+import {
+  chatAvatarCatalog,
+  resolveChatAvatarAssets,
+} from '@/assets/chatAvatarCatalog'
 import type { User } from '@/types/user'
 import type { ProfileForm } from './profilePageModel'
 
+/** 当前用户资料与受控编辑状态。 */
 type ProfileHeaderProps = {
+  /** 当前账号资料，缺失时显示占位信息。 */
   user: User | null
+  /** 编辑中的昵称、简介和头像键。 */
   form: ProfileForm
+  /** 非编辑状态展示的用户名称。 */
   displayName: string
+  /** 是否显示资料编辑控件。 */
   editing: boolean
+  /** 是否展示头像选择面板。 */
   pickerOpen: boolean
+  /** 保存请求中标记。 */
   saving: boolean
+  /** 注销请求中标记。 */
   deletingAccount: boolean
+  /** 是否允许提交当前表单，由调用方计算。 */
   canSave: boolean
+  /** 接收更新后的完整资料表单。 */
   onFormChange: (form: ProfileForm) => void
+  /** 更新头像选择面板的打开状态。 */
   onPickerOpenChange: (open: boolean) => void
+  /** 开始编辑当前资料。 */
   onStartEdit: () => void
+  /** 取消资料编辑。 */
   onCancelEdit: () => void
+  /** 保存当前资料表单。 */
   onSave: () => void
+  /** 打开或处理退出登录操作。 */
   onLogout: () => void
+  /** 打开或处理注销账号操作。 */
   onDeleteAccount: () => void
 }
 
+/** 展示或编辑当前用户资料，并提供头像选择与账号操作入口。 */
 export function ProfileHeader({
   user,
   form,
@@ -42,7 +62,9 @@ export function ProfileHeader({
   onDeleteAccount,
 }: ProfileHeaderProps) {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
-  const avatarAssets = resolveChatAvatarAssets(form.avatarKey || user?.avatar_key)
+  const avatarAssets = resolveChatAvatarAssets(
+    form.avatarKey || user?.avatar_key,
+  )
 
   useEffect(() => {
     if (!accountMenuOpen) return
@@ -73,7 +95,11 @@ export function ProfileHeader({
           className="group relative block h-36 w-36 overflow-hidden rounded-full border-4 border-zinc-200 bg-zinc-950 transition enabled:hover:border-white disabled:cursor-default"
           aria-label="更换头像"
         >
-          <img src={avatarAssets.avatar} alt="用户头像" className="h-full w-full object-cover" />
+          <img
+            src={avatarAssets.avatar}
+            alt="用户头像"
+            className="h-full w-full object-cover"
+          />
           {editing && (
             <span className="absolute inset-x-0 bottom-0 bg-black/70 py-2 text-center text-xs font-medium text-zinc-100 opacity-0 transition group-hover:opacity-100">
               更换
@@ -83,9 +109,14 @@ export function ProfileHeader({
 
         {pickerOpen && (
           <>
-            <div className="fixed inset-0 z-10" onClick={() => onPickerOpenChange(false)} />
+            <div
+              className="fixed inset-0 z-10"
+              onClick={() => onPickerOpenChange(false)}
+            />
             <div className="absolute left-0 top-[calc(100%+0.75rem)] z-20 w-64 rounded-sm border border-zinc-700 bg-black p-3 shadow-xl shadow-black/60">
-              <p className="mb-2 px-1 text-[11px] font-medium uppercase text-zinc-500">选择头像</p>
+              <p className="mb-2 px-1 text-[11px] font-medium uppercase text-zinc-500">
+                选择头像
+              </p>
               <div className="grid grid-cols-4 gap-2">
                 {Object.entries(chatAvatarCatalog).map(([key, assets]) => {
                   const selected = key === form.avatarKey
@@ -98,12 +129,18 @@ export function ProfileHeader({
                         onPickerOpenChange(false)
                       }}
                       className={`overflow-hidden rounded-sm border transition ${
-                        selected ? 'border-zinc-100 ring-1 ring-zinc-100' : 'border-zinc-800 hover:border-zinc-500'
+                        selected
+                          ? 'border-zinc-100 ring-1 ring-zinc-100'
+                          : 'border-zinc-800 hover:border-zinc-500'
                       }`}
                       aria-label={`头像 ${key}`}
                       aria-pressed={selected}
                     >
-                      <img src={assets.avatar} alt={key} className="h-12 w-12 object-cover" />
+                      <img
+                        src={assets.avatar}
+                        alt={key}
+                        className="h-12 w-12 object-cover"
+                      />
                     </button>
                   )
                 })}
@@ -120,28 +157,38 @@ export function ProfileHeader({
               value={form.nickname}
               maxLength={64}
               autoFocus
-              onChange={(event) => onFormChange({ ...form, nickname: event.target.value })}
+              onChange={(event) =>
+                onFormChange({ ...form, nickname: event.target.value })
+              }
               className="h-10 min-w-0 max-w-xs rounded-sm border border-zinc-700 bg-black px-3 text-2xl font-semibold text-zinc-100 outline-none transition focus:border-zinc-300"
             />
           ) : (
-            <h1 className="truncate text-3xl font-semibold tracking-normal text-zinc-100">{displayName}</h1>
+            <h1 className="truncate text-3xl font-semibold tracking-normal text-zinc-100">
+              {displayName}
+            </h1>
           )}
         </div>
 
-        <p className="block border-b border-gray-200 pb-2 w-30 mt-3 font-mono text-sm text-zinc-300">@{user?.username || '-'} ID: {user?.id ?? '-'}</p>
+        <p className="block border-b border-gray-200 pb-2 w-30 mt-3 font-mono text-sm text-zinc-300">
+          @{user?.username || '-'} ID: {user?.id ?? '-'}
+        </p>
 
         <div className="mt-3">
           {editing ? (
             <>
               <div className="mb-1.5 flex max-w-xl items-center justify-between text-xs text-zinc-500">
                 <span>简介</span>
-                <span className="font-mono tabular-nums text-zinc-600">{form.bio.length}/200</span>
+                <span className="font-mono tabular-nums text-zinc-600">
+                  {form.bio.length}/200
+                </span>
               </div>
               <textarea
                 value={form.bio}
                 maxLength={200}
                 rows={4}
-                onChange={(event) => onFormChange({ ...form, bio: event.target.value })}
+                onChange={(event) =>
+                  onFormChange({ ...form, bio: event.target.value })
+                }
                 className="w-full max-w-xl resize-none rounded-sm border border-zinc-700 bg-black px-3.5 py-2.5 text-sm leading-relaxed text-zinc-100 outline-none transition focus:border-zinc-300"
               />
             </>

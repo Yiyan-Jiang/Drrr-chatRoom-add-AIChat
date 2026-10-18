@@ -1,3 +1,5 @@
+"""装配 FastAPI 路由、CORS 和共用的 Socket.IO ASGI 应用。"""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from socketio import ASGIApp
@@ -26,6 +28,7 @@ from normal_system.routers import (
 
 
 def create_app() -> FastAPI:
+    """创建挂载业务路由和生命周期的 FastAPI 应用。"""
     app = FastAPI(
         lifespan=lifespan,
         title=APP_TITLE,
@@ -39,6 +42,7 @@ def create_app() -> FastAPI:
 
 
 def configure_cors(app: FastAPI) -> None:
+    """为指定应用安装允许前端携带凭证的 CORS 中间件。"""
     app.add_middleware(
         CORSMiddleware,
         allow_origins=CORS_ORIGINS,
@@ -50,6 +54,7 @@ def configure_cors(app: FastAPI) -> None:
 
 
 def include_routers(app: FastAPI) -> None:
+    """将已有业务路由统一挂载到 API_PREFIX 下。"""
     for router in (
         user_router,
         auth_router,

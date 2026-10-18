@@ -1,3 +1,4 @@
+/** 展示好友列表和待处理申请，提供好友申请处理与删除入口。 */
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -9,19 +10,28 @@ import { logger } from '@/utils/logger'
 
 const pageSize = 12
 
+/** 返回好友申请中指定一方的显示名。 */
 function requestName(request: FriendRequest, side: 'requester' | 'recipient') {
-  return getUserDisplayName(side === 'requester' ? request.requester : request.recipient)
+  return getUserDisplayName(
+    side === 'requester' ? request.requester : request.recipient,
+  )
 }
 
+/** 仅保留仍待处理的好友申请。 */
 function filterPendingFriendRequests(requests: FriendRequest[]) {
   return requests.filter((request) => request.status === 'pending')
 }
 
+/** 展示好友列表和待处理申请，提供好友申请处理与删除入口。 */
 export default function FriendsPage() {
   const navigate = useNavigate()
   const [friends, setFriends] = useState<Friend[]>([])
-  const [incomingFriendRequests, setIncomingFriendRequests] = useState<FriendRequest[]>([])
-  const [outgoingFriendRequests, setOutgoingFriendRequests] = useState<FriendRequest[]>([])
+  const [incomingFriendRequests, setIncomingFriendRequests] = useState<
+    FriendRequest[]
+  >([])
+  const [outgoingFriendRequests, setOutgoingFriendRequests] = useState<
+    FriendRequest[]
+  >([])
   const [friendPage, setFriendPage] = useState(1)
   const [hasMoreFriends, setHasMoreFriends] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -112,8 +122,12 @@ export default function FriendsPage() {
     <div className="h-full min-h-0 overflow-auto bg-black text-zinc-100">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-8">
         <header className="border-b border-zinc-800 pb-4">
-          <h1 className="text-2xl font-semibold tracking-normal text-white">友达</h1>
-          <p className="mt-2 text-sm text-zinc-500">管理好友、处理申请，并从这里发起私聊。</p>
+          <h1 className="text-2xl font-semibold tracking-normal text-white">
+            友达
+          </h1>
+          <p className="mt-2 text-sm text-zinc-500">
+            管理好友、处理申请，并从这里发起私聊。
+          </p>
         </header>
 
         <section className="rounded-sm border border-zinc-800 bg-zinc-950/40">
@@ -141,24 +155,42 @@ export default function FriendsPage() {
           </div>
 
           {loading ? (
-            <p className="px-4 py-8 text-center text-sm text-zinc-500">加载中...</p>
+            <p className="px-4 py-8 text-center text-sm text-zinc-500">
+              加载中...
+            </p>
           ) : friends.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-zinc-500">暂无好友。可以在聊天室或帖子头像上发起好友申请。</p>
+            <p className="px-4 py-8 text-center text-sm text-zinc-500">
+              暂无好友。可以在聊天室或帖子头像上发起好友申请。
+            </p>
           ) : (
             <ul className="grid gap-3 p-4 md:grid-cols-2">
               {friends.map((friend) => {
                 const assets = resolveChatAvatarAssets(friend.user.avatar_key)
                 const label = getUserDisplayName(friend.user)
                 return (
-                  <li key={friend.user.id} className="flex items-center gap-3 border border-zinc-800 bg-black px-3 py-3">
-                    <img src={assets.avatar} alt="" className="h-12 w-12 shrink-0 object-cover" loading="lazy" />
+                  <li
+                    key={friend.user.id}
+                    className="flex items-center gap-3 border border-zinc-800 bg-black px-3 py-3"
+                  >
+                    <img
+                      src={assets.avatar}
+                      alt=""
+                      className="h-12 w-12 shrink-0 object-cover"
+                      loading="lazy"
+                    />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-semibold text-zinc-100">{label}</div>
-                      <div className="truncate text-xs text-zinc-500">@{friend.user.username}</div>
+                      <div className="truncate text-sm font-semibold text-zinc-100">
+                        {label}
+                      </div>
+                      <div className="truncate text-xs text-zinc-500">
+                        @{friend.user.username}
+                      </div>
                     </div>
                     <button
                       type="button"
-                      onClick={() => navigate(`/private-chat/${friend.user.id}`)}
+                      onClick={() =>
+                        navigate(`/private-chat/${friend.user.id}`)
+                      }
                       className="border border-zinc-700 px-3 py-1.5 text-xs transition hover:border-cyan-500"
                     >
                       私聊
@@ -180,14 +212,23 @@ export default function FriendsPage() {
 
         <section className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-sm border border-zinc-800 bg-zinc-950/40">
-            <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold text-white">收到的申请</h2>
+            <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold text-white">
+              收到的申请
+            </h2>
             {incomingFriendRequests.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-zinc-500">暂无收到的好友申请。</p>
+              <p className="px-4 py-6 text-sm text-zinc-500">
+                暂无收到的好友申请。
+              </p>
             ) : (
               <ul className="divide-y divide-zinc-800">
                 {incomingFriendRequests.map((request) => (
-                  <li key={request.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                    <span className="min-w-0 truncate text-sm text-zinc-200">{requestName(request, 'requester')}</span>
+                  <li
+                    key={request.id}
+                    className="flex items-center justify-between gap-3 px-4 py-3"
+                  >
+                    <span className="min-w-0 truncate text-sm text-zinc-200">
+                      {requestName(request, 'requester')}
+                    </span>
                     <div className="flex shrink-0 gap-2">
                       <button
                         type="button"
@@ -213,14 +254,23 @@ export default function FriendsPage() {
           </div>
 
           <div className="rounded-sm border border-zinc-800 bg-zinc-950/40">
-            <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold text-white">发出的申请</h2>
+            <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold text-white">
+              发出的申请
+            </h2>
             {outgoingFriendRequests.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-zinc-500">暂无发出的好友申请。</p>
+              <p className="px-4 py-6 text-sm text-zinc-500">
+                暂无发出的好友申请。
+              </p>
             ) : (
               <ul className="divide-y divide-zinc-800">
                 {outgoingFriendRequests.map((request) => (
-                  <li key={request.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                    <span className="min-w-0 truncate text-sm text-zinc-200">{requestName(request, 'recipient')}</span>
+                  <li
+                    key={request.id}
+                    className="flex items-center justify-between gap-3 px-4 py-3"
+                  >
+                    <span className="min-w-0 truncate text-sm text-zinc-200">
+                      {requestName(request, 'recipient')}
+                    </span>
                     <button
                       type="button"
                       disabled={busyRequestId === request.id}

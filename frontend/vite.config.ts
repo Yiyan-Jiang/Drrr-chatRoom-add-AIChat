@@ -1,3 +1,4 @@
+/** 配置 React、Tailwind CSS 和源码目录别名的 Vite 构建入口。 */
 import { fileURLToPath, URL } from 'node:url'
 
 import tailwindcss from '@tailwindcss/vite'

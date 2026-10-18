@@ -1,12 +1,23 @@
+/** 编辑并预览 Markdown 帖子，提交去除首尾空白的标题和正文，成功后清空并收起。 */
 import { useState, type FormEvent } from 'react'
 import { PostsMarkdownRenderer } from '@/features/posts/markdownRenderer'
 
+/** 发帖编辑器的请求状态与提交接口。 */
 type PostEditorProps = {
+  /** 发布请求期间禁用标题、正文及提交按钮。 */
   disabled?: boolean
-  onSubmit: (payload: { title: string; content: string }) => Promise<unknown>
+  /** 接收非空且已去除首尾空白的标题和正文；拒绝时保留草稿并显示错误。 */
+  onSubmit: (payload: {
+    /** 去除首尾空白且非空的帖子标题。 */ title: string
+    /** 去除首尾空白且非空的 Markdown 正文。 */ content: string
+  }) => Promise<unknown>
 }
 
-export default function PostEditor({ disabled = false, onSubmit }: PostEditorProps) {
+/** 编辑并预览 Markdown 帖子，提交去除首尾空白的标题和正文，成功后清空并收起。 */
+export default function PostEditor({
+  disabled = false,
+  onSubmit,
+}: PostEditorProps) {
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')

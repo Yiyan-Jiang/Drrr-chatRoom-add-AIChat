@@ -1,3 +1,4 @@
+/** 为动态文章配置 Markdown、代码高亮及渲染组件。 */
 import {
   isValidElement,
   useEffect,
@@ -17,27 +18,47 @@ const prettyCodeOptions = {
   keepBackground: false,
 } as const
 
+/** 共享 Markdown 渲染器的正文、组件覆盖和标题锚点配置。 */
 type MarkdownRendererProps = {
+  /** 待渲染的 Markdown 源文本。 */
   markdown: string
+  /** 覆盖默认标签渲染方式的组件集合。 */
   components?: Components
+  /** 按二级和三级标题出现顺序分配的锚点编号。 */
   headingIds?: string[]
 }
 
+/** 标题锚点转换所需的 HAST 节点子集。 */
 type HastNode = {
+  /** HAST 节点种类。 */
   type?: string
+  /** 元素节点的 HTML 标签名。 */
   tagName?: string
+  /** 元素节点属性。 */
   properties?: Record<string, unknown>
+  /** 当前语法树节点的子节点。 */
   children?: HastNode[]
 }
 
+/**
+ * 创建 rehype 插件，按二级和三级标题的出现顺序写入给定锚点。
+ * @param headingIds - 与标题顺序对应的锚点编号。
+ * @returns 会修改 HAST 标题属性的转换函数。
+ */
 function applyHeadingIds(headingIds: string[]) {
-  return function transform(tree: HastNode) {
+  return /** 遍历当前 HAST 树，为二级和三级标题写入对应的锚点属性。 */ function transform(
+    tree: HastNode,
+  ) {
     let headingIndex = 0
 
+    /**
+     * 深度遍历子节点，并为当前二级或三级标题分配下一项锚点。
+     * @param node - 当前遍历到的 HAST 节点。
+     */
     function visit(node: HastNode) {
       if (
-        node.type === 'element'
-        && (node.tagName === 'h2' || node.tagName === 'h3')
+        node.type === 'element' &&
+        (node.tagName === 'h2' || node.tagName === 'h3')
       ) {
         const id = headingIds[headingIndex]
         headingIndex += 1
@@ -59,6 +80,11 @@ function applyHeadingIds(headingIds: string[]) {
 
 const SAFE_URL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:'])
 
+/**
+ * 允许页内锚点、相对地址以及 http、https 和 mailto 链接，其余地址返回 undefined。
+ * @param url - Markdown 提供的链接或图片地址。
+ * @returns 去除首尾空白的可用地址，或 undefined。
+ */
 function sanitizeUrl(url: string | undefined): string | undefined {
   if (!url) {
     return undefined
@@ -66,12 +92,12 @@ function sanitizeUrl(url: string | undefined): string | undefined {
 
   const trimmed = url.trim()
 
-  // Allow in-page anchors and relative/protocol-relative links.
+  // 允许页内锚点、相对链接和协议相对链接。
   if (
-    trimmed.startsWith('#')
-    || trimmed.startsWith('/')
-    || trimmed.startsWith('./')
-    || trimmed.startsWith('../')
+    trimmed.startsWith('#') ||
+    trimmed.startsWith('/') ||
+    trimmed.startsWith('./') ||
+    trimmed.startsWith('../')
   ) {
     return trimmed
   }
@@ -82,12 +108,17 @@ function sanitizeUrl(url: string | undefined): string | undefined {
       return trimmed
     }
   } catch {
-    // Unparseable URLs are treated as unsafe.
+    // 无法解析的 URL 不作为可用链接。
   }
 
   return undefined
 }
 
+/**
+ * 将行内代码内容放入统一样式的 code 标签。
+ * @param children - 行内代码的子内容。
+ * @returns 行内代码元素。
+ */
 function renderInlineCode(children: ReactNode) {
   return (
     <code className="inline-code rounded bg-[#f6f6f7] px-1.5 py-0.5 text-[13px] font-semibold text-[#213547]">
@@ -96,6 +127,11 @@ function renderInlineCode(children: ReactNode) {
   )
 }
 
+/**
+ * 递归提取 React 子节点中的文本和数字，忽略空值及布尔值。
+ * @param node - 代码块内的 React 内容。
+ * @returns 按子节点顺序拼接的文本。
+ */
 function getTextContent(node: ReactNode): string {
   if (node === null || node === undefined || typeof node === 'boolean') {
     return ''
@@ -109,13 +145,22 @@ function getTextContent(node: ReactNode): string {
     return node.map(getTextContent).join('')
   }
 
-  if (isValidElement<{ children?: ReactNode }>(node)) {
+  if (
+    isValidElement<{
+      /** 需要继续提取文本的 React 子内容。 */ children?: ReactNode
+    }>(node)
+  ) {
     return getTextContent(node.props.children)
   }
 
   return ''
 }
 
+/**
+ * 优先调用 Clipboard API 写入文本，不可用时创建临时文本框并调用旧版 copy 命令。
+ * @param text - 需要写入剪贴板的代码文本。
+ * @returns 写入流程结束的 Promise；Clipboard API 的失败会继续抛出。
+ */
 async function copyTextToClipboard(text: string) {
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(text)
@@ -133,12 +178,19 @@ async function copyTextToClipboard(text: string) {
   window.document.body.removeChild(textarea)
 }
 
+/** 代码块容器的 DOM 属性和 Markdown 节点数据。 */
 type CodeBlockPreProps = HTMLAttributes<HTMLPreElement> & {
+  /** Markdown 传入的语法树节点，不传给 DOM。 */
   node?: unknown
 }
 
+/**
+ * 渲染带复制按钮的代码块，并在点击复制后短暂显示已复制状态。
+ * @param props - pre 标签属性、代码内容及需要从 DOM 属性中排除的语法树节点。
+ * @returns 带复制操作的代码块容器。
+ */
 function CodeBlockPre({ children, node: _node, ...props }: CodeBlockPreProps) {
-  void _node // The Markdown AST node is not a DOM attribute.
+  void _node // Markdown 语法树节点不是 DOM 属性。
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -245,12 +297,21 @@ const defaultComponents: Components = {
   ),
   code: ({ children, className, node: _node, ...props }) => {
     void _node
-    const isBlock = Boolean(className?.includes('language-'))
-      || Boolean((props as { 'data-language'?: string })['data-language'])
+    const isBlock =
+      Boolean(className?.includes('language-')) ||
+      Boolean(
+        (
+          props as {
+            /** 代码高亮插件写入的代码块语言标识。 */ 'data-language'?: string
+          }
+        )['data-language'],
+      )
 
-    return isBlock
-      ? <code className="block text-[#213547]">{children}</code>
-      : renderInlineCode(children)
+    return isBlock ? (
+      <code className="block text-[#213547]">{children}</code>
+    ) : (
+      renderInlineCode(children)
+    )
   },
   pre: CodeBlockPre,
   table: ({ children }) => (
@@ -279,13 +340,25 @@ const defaultComponents: Components = {
   hr: () => <hr className="border-[#e2e2e3]" />,
 }
 
-export function MarkdownRenderer({ markdown, components, headingIds }: MarkdownRendererProps) {
+/**
+ * 合并默认渲染组件与调用方覆盖，并按需向二级和三级标题分配锚点。
+ * @param props - Markdown 正文、可选组件覆盖与标题锚点。
+ * @returns 启用 GFM 和代码高亮的 Markdown 组件。
+ */
+export function MarkdownRenderer({
+  markdown,
+  components,
+  headingIds,
+}: MarkdownRendererProps) {
   const mergedComponents = {
     ...defaultComponents,
     ...components,
   } satisfies Components
   const rehypePlugins: PluggableList = headingIds
-    ? [[applyHeadingIds, headingIds], [rehypePrettyCode, prettyCodeOptions]]
+    ? [
+        [applyHeadingIds, headingIds],
+        [rehypePrettyCode, prettyCodeOptions],
+      ]
     : [[rehypePrettyCode, prettyCodeOptions]]
 
   return (
@@ -293,11 +366,14 @@ export function MarkdownRenderer({ markdown, components, headingIds }: MarkdownR
       remarkPlugins={[remarkGfm]}
       rehypePlugins={rehypePlugins}
       components={mergedComponents}
-      fallback={<div className="text-[15px] leading-7 text-[#3c3c43]">Loading...</div>}
+      fallback={
+        <div className="text-[15px] leading-7 text-[#3c3c43]">Loading...</div>
+      }
     >
       {markdown}
     </MarkdownHooks>
   )
 }
 
+/** Shiki 内置代码高亮语言名称。 */
 export type SupportedHighlightLanguage = BundledLanguage

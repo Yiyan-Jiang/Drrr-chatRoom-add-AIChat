@@ -1,3 +1,5 @@
+"""管理帖子、评论和互动记录的业务规则及写事务。"""
+
 from datetime import datetime
 
 from sqlalchemy.exc import IntegrityError
@@ -19,6 +21,7 @@ from normal_system.schemas.post import PostCommentCreate, PostCreate
 
 
 async def create_post(db: AsyncSession, payload: PostCreate, author_id: int) -> Post:
+    """以指定作者发布帖子并提交，返回刷新后的帖子模型。"""
     now = datetime.now()
     post = add_post(
         db,
@@ -40,6 +43,7 @@ async def add_post_comment(
     payload: PostCommentCreate,
     author_id: int,
 ) -> PostComment:
+    """确认帖子存在后提交评论，帖子不存在时抛出 ValueError。"""
     post = await get_post_by_id(db, post_id)
     if not post:
         raise ValueError("Post not found")
@@ -63,6 +67,7 @@ async def delete_post_comment(
     comment_id: int,
     requester_id: int,
 ) -> bool:
+    """校验评论所属帖子及作者后删除并提交，不存在时返回 False。"""
     comment = await get_post_comment_by_id(db, comment_id)
     if not comment or comment.post_id != post_id:
         return False
@@ -78,6 +83,7 @@ async def delete_post(
     post_id: int,
     requester_id: int,
 ) -> bool:
+    """校验已发布帖子及作者后删除并提交，不存在时返回 False。"""
     post = await get_post_by_id(db, post_id)
     if not post or post.status != "published":
         return False
@@ -89,6 +95,11 @@ async def delete_post(
 
 
 async def _add_unique(db: AsyncSession, model, post_id: int, user_id: int) -> None:
+    """提交点赞或收藏，仅在回滚后确认相同互动已存在时接受重复写入。
+
+    Raises:
+        IntegrityError: 回滚后未找到相同互动，无法将完整性错误视为重复操作。
+    """
     exists = await get_post_reaction_id(db, model, post_id, user_id)
     if exists is not None:
         return
@@ -97,24 +108,31 @@ async def _add_unique(db: AsyncSession, model, post_id: int, user_id: int) -> No
         await db.commit()
     except IntegrityError:
         await db.rollback()
+        if await get_post_reaction_id(db, model, post_id, user_id) is None:
+            raise
 
 
 async def _delete_unique(db: AsyncSession, model, post_id: int, user_id: int) -> None:
+    """删除指定类型的帖子互动并提交事务。"""
     await remove_post_reaction(db, model, post_id, user_id)
     await db.commit()
 
 
 async def like_post(db: AsyncSession, post_id: int, user_id: int) -> None:
+    """登记用户对帖子的点赞并提交事务。"""
     await _add_unique(db, PostLike, post_id, user_id)
 
 
 async def unlike_post(db: AsyncSession, post_id: int, user_id: int) -> None:
+    """删除用户对帖子的点赞并提交事务。"""
     await _delete_unique(db, PostLike, post_id, user_id)
 
 
 async def favorite_post(db: AsyncSession, post_id: int, user_id: int) -> None:
+    """登记用户对帖子的收藏并提交事务。"""
     await _add_unique(db, PostFavorite, post_id, user_id)
 
 
 async def unfavorite_post(db: AsyncSession, post_id: int, user_id: int) -> None:
+    """删除用户对帖子的收藏并提交事务。"""
     await _delete_unique(db, PostFavorite, post_id, user_id)

@@ -1,26 +1,42 @@
 /**
- * @parm 组件用途：展示创建聊天室的折叠表单面板。
+ * 展示创建聊天室的折叠表单面板。
  */
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 
+/** 建房表单的受控原始输入与创建回调。 */
 interface RoomCreatePanelProps {
+  /** 创建请求中标记，用于禁用字段和提交。 */
   creating: boolean
+  /** 房间名输入，界面最多接受 8 个字符。 */
   newRoomName: string
+  /** 房间简介输入，界面最多接受 20 个字符。 */
   description: string
+  /** 尚未拆分的标签输入文本。 */
   tagInput: string
+  /** 最小年龄原始输入，空字符串可表示不限。 */
   minAge: string
+  /** 最大年龄原始输入，空字符串可表示不限。 */
   maxAge: string
+  /** 最大人数原始输入，转换与业务校验由调用方处理。 */
   maxMembers: string
+  /** 接收新的房间名输入。 */
   onNewRoomNameChange: (value: string) => void
+  /** 接收新的简介输入。 */
   onDescriptionChange: (value: string) => void
+  /** 接收新的标签输入文本。 */
   onTagInputChange: (value: string) => void
+  /** 接收最小年龄原始输入。 */
   onMinAgeChange: (value: string) => void
+  /** 接收最大年龄原始输入。 */
   onMaxAgeChange: (value: string) => void
+  /** 接收最大人数原始输入。 */
   onMaxMembersChange: (value: string) => void
+  /** 创建房间的异步回调，组件等待其完成。 */
   onCreateRoom: () => Promise<void>
 }
 
+/** 展示可展开的建房表单，字段由父组件维护，提交时等待创建回调。 */
 export default function RoomCreatePanel({
   creating,
   newRoomName,

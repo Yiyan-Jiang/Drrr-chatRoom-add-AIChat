@@ -1,10 +1,17 @@
+/** 展示最多 3000 字符的受控评论输入，并在空白或禁用时禁用提交。 */
+/** 受控评论草稿与异步提交入口。 */
 type CommentComposerProps = {
+  /** 当前评论草稿，输入框最多接受 3000 字符。 */
   value: string
+  /** 是否禁用编辑和提交。 */
   disabled?: boolean
+  /** 接收新的完整评论草稿。 */
   onChange: (value: string) => void
+  /** 提交当前草稿；发送结果和草稿清理由调用方处理。 */
   onSubmit: () => Promise<void>
 }
 
+/** 展示最多 3000 字符的受控评论输入，并在空白或禁用时禁用提交。 */
 export default function CommentComposer({
   value,
   disabled = false,

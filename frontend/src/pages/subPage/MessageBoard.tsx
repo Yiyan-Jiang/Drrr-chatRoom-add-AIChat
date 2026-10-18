@@ -1,11 +1,14 @@
+/** 加载 GitHub Issue 留言列表并展示对应的加载、失败和空状态。 */
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { githubIssuesApi } from '@/api'
 import type { MessageBoardIssue } from '@/api'
 import { MessageBoardMarkdownRenderer } from '@/features/messageBoard/markdownRenderer'
 
+/** 页面请求的空闲、加载、成功和失败状态。 */
 type LoadState = 'idle' | 'loading' | 'success' | 'error'
 
+/** 将 Issue 时间格式化为本地时区的中文年月日。 */
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
@@ -14,10 +17,12 @@ function formatDate(value: string): string {
   }).format(new Date(value))
 }
 
+/** 根据 GitHub 响应状态区分限流、资源不可用和一般连接错误提示。 */
 function getErrorMessage(error: unknown): string {
-  const status = typeof error === 'object' && error !== null && 'response' in error
-    ? (error as { response?: { status?: number } }).response?.status
-    : undefined
+  const status =
+    typeof error === 'object' && error !== null && 'response' in error
+      ? (error as { response?: { status?: number } }).response?.status
+      : undefined
 
   if (status === 403) {
     return 'GitHub API 请求次数暂时受限，请稍后再试。'
@@ -30,22 +35,27 @@ function getErrorMessage(error: unknown): string {
   return '暂时无法连接 GitHub，请稍后重试。'
 }
 
+/** 加载 GitHub Issue 留言列表并展示对应的加载、失败和空状态。 */
 export default function MessageBoard() {
   const navigate = useNavigate()
   const [issues, setIssues] = useState<MessageBoardIssue[]>([])
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [errorMessage, setErrorMessage] = useState('')
 
-  const loadIssues = useCallback(() => githubIssuesApi.list().then(
-    (nextIssues) => {
-      setIssues(nextIssues)
-      setLoadState('success')
-    },
-    (error: unknown) => {
-      setErrorMessage(getErrorMessage(error))
-      setLoadState('error')
-    },
-  ), [])
+  const loadIssues = useCallback(
+    () =>
+      githubIssuesApi.list().then(
+        (nextIssues) => {
+          setIssues(nextIssues)
+          setLoadState('success')
+        },
+        (error: unknown) => {
+          setErrorMessage(getErrorMessage(error))
+          setLoadState('error')
+        },
+      ),
+    [],
+  )
 
   const refreshIssues = () => {
     setLoadState('loading')
@@ -139,8 +149,14 @@ export default function MessageBoard() {
                     </div>
 
                     <p className="mt-1 text-xs text-zinc-500">
-                      #{issue.number} by {issue.author.login} · 更新于 {formatDate(issue.updatedAt)} ·{' '}
-                      {issue.commentsCount} 条评论
+                      {'#'}
+                      {issue.number}
+                      {' by '}
+                      {issue.author.login}
+                      {' · 更新于 '}
+                      {formatDate(issue.updatedAt)}
+                      {' ·'} {issue.commentsCount}
+                      {' 条评论'}
                     </p>
 
                     {issue.body ? (
@@ -148,7 +164,9 @@ export default function MessageBoard() {
                         <MessageBoardMarkdownRenderer markdown={issue.body} />
                       </div>
                     ) : (
-                      <p className="mt-3 text-sm text-zinc-500">这个 issue 没有正文。</p>
+                      <p className="mt-3 text-sm text-zinc-500">
+                        这个 issue 没有正文。
+                      </p>
                     )}
                   </div>
                 </div>

@@ -1,5 +1,5 @@
 /**
- * @parm 组件用途：展示主布局左侧导航栏。
+ * 展示主布局左侧导航栏。
  */
 import { NavLink } from 'react-router-dom'
 
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { path: '/home/posts', label: '帖子' },
 ]
 
+/** 展示新闻、房间、留言板和帖子入口，并标记当前路由。 */
 export default function LeftSidebar() {
   return (
     <div className="mx-auto mt-5 h-full w-[90%] space-y-3 bg-black lg:max-w-50">
@@ -19,7 +20,9 @@ export default function LeftSidebar() {
           to={item.path}
           className={({ isActive }) =>
             `mx-auto block rounded-xl border-2 px-4 py-2 text-center transition-all ${
-              isActive ? 'bg-[#666] font-bold text-white' : 'text-white hover:scale-105'
+              isActive
+                ? 'bg-[#666] font-bold text-white'
+                : 'text-white hover:scale-105'
             }`
           }
         >

@@ -1,13 +1,19 @@
+/** 展示帖子与 Markdown 正文，提供点赞、收藏和评论入口。 */
 import { Link, useParams } from 'react-router-dom'
 import CommentComposer from '@/components/posts/CommentComposer'
 import CommentList from '@/components/posts/CommentList'
 import PostAuthorAvatar from '@/components/posts/PostAuthorAvatar'
 import { getPostAuthorName } from '@/components/posts/postAuthorName'
-import { CommentIcon, FavoriteIcon, LikeIcon } from '@/components/posts/PostStatsIcons'
+import {
+  CommentIcon,
+  FavoriteIcon,
+  LikeIcon,
+} from '@/components/posts/PostStatsIcons'
 import PostMarkdownArticle from '@/features/posts/PostMarkdownArticle'
 import { usePostDetail } from '@/hooks/usePostDetail'
 import logoSource from '@/assets/icon/Logo/logo.png'
 
+/** 按本地时区展示帖子更新的年月日和时分。 */
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
@@ -18,6 +24,7 @@ function formatDate(value: string): string {
   }).format(new Date(value))
 }
 
+/** 展示帖子与 Markdown 正文，提供点赞、收藏和评论入口。 */
 export default function PostDetail() {
   const { postId } = useParams()
   const parsedPostId = Number(postId)
@@ -33,7 +40,9 @@ export default function PostDetail() {
     toggleLike,
     toggleFavorite,
     submitComment,
-  } = usePostDetail(Number.isInteger(parsedPostId) && parsedPostId > 0 ? parsedPostId : null)
+  } = usePostDetail(
+    Number.isInteger(parsedPostId) && parsedPostId > 0 ? parsedPostId : null,
+  )
 
   if (loadState === 'loading') {
     return (
@@ -54,19 +63,24 @@ export default function PostDetail() {
         <PostHeader />
         <section className="mx-auto max-w-4xl px-4 py-5 sm:px-6">
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-5">
-          <p className="text-sm text-red-700">{errorMessage || '帖子不存在或已被删除。'}</p>
-          <div className="mt-4 flex gap-3">
-            <button
-              className="rounded border border-red-200 px-3 py-1.5 text-sm text-red-700 transition hover:bg-red-100"
-              type="button"
-              onClick={loadPost}
-            >
-              重试
-            </button>
-            <Link className="rounded border border-[#e2e2e3] bg-white px-3 py-1.5 text-sm text-[#3451b2]" to="/home/posts">
-              返回帖子
-            </Link>
-          </div>
+            <p className="text-sm text-red-700">
+              {errorMessage || '帖子不存在或已被删除。'}
+            </p>
+            <div className="mt-4 flex gap-3">
+              <button
+                className="rounded border border-red-200 px-3 py-1.5 text-sm text-red-700 transition hover:bg-red-100"
+                type="button"
+                onClick={loadPost}
+              >
+                重试
+              </button>
+              <Link
+                className="rounded border border-[#e2e2e3] bg-white px-3 py-1.5 text-sm text-[#3451b2]"
+                to="/home/posts"
+              >
+                返回帖子
+              </Link>
+            </div>
           </div>
         </section>
       </main>
@@ -77,7 +91,10 @@ export default function PostDetail() {
     <main className="min-h-screen bg-[#f6f6f7] pt-14 text-[#213547]">
       <PostHeader />
       <section className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-5 sm:px-6">
-        <Link className="w-fit text-sm font-medium text-[#3451b2] transition hover:text-[#213547]" to="/home/posts">
+        <Link
+          className="w-fit text-sm font-medium text-[#3451b2] transition hover:text-[#213547]"
+          to="/home/posts"
+        >
           返回帖子
         </Link>
 
@@ -90,7 +107,9 @@ export default function PostDetail() {
                   <span>by {getPostAuthorName(post.author)}</span>
                   <span>更新于 {formatDate(post.updated_at)}</span>
                 </div>
-                <h1 className="mt-4 text-3xl font-bold tracking-tight text-[#213547]">{post.title}</h1>
+                <h1 className="mt-4 text-3xl font-bold tracking-tight text-[#213547]">
+                  {post.title}
+                </h1>
               </div>
             </div>
           </header>
@@ -112,7 +131,9 @@ export default function PostDetail() {
                 disabled={isMutating}
                 onClick={() => void toggleLike()}
               >
-                <LikeIcon className={post.liked_by_me ? 'fill-current' : undefined} />
+                <LikeIcon
+                  className={post.liked_by_me ? 'fill-current' : undefined}
+                />
                 <span>{post.likes_count}</span>
                 <span>赞</span>
               </button>
@@ -127,7 +148,9 @@ export default function PostDetail() {
                 disabled={isMutating}
                 onClick={() => void toggleFavorite()}
               >
-                <FavoriteIcon className={post.favorited_by_me ? 'fill-current' : undefined} />
+                <FavoriteIcon
+                  className={post.favorited_by_me ? 'fill-current' : undefined}
+                />
                 <span>{post.favorites_count}</span>
                 <span>收藏</span>
               </button>
@@ -164,6 +187,7 @@ export default function PostDetail() {
   )
 }
 
+/** 展示帖子详情的固定品牌栏与帖子、聊天室导航。 */
 function PostHeader() {
   return (
     <header className="fixed inset-x-0 top-0 z-40 border-b border-zinc-900 bg-black/95">
@@ -179,10 +203,16 @@ function PostHeader() {
           </span>
         </Link>
         <nav className="flex items-center gap-4 text-sm">
-          <Link className="text-zinc-400 transition hover:text-zinc-100" to="/home/posts">
+          <Link
+            className="text-zinc-400 transition hover:text-zinc-100"
+            to="/home/posts"
+          >
             帖子
           </Link>
-          <Link className="text-zinc-400 transition hover:text-zinc-100" to="/home/rooms">
+          <Link
+            className="text-zinc-400 transition hover:text-zinc-100"
+            to="/home/rooms"
+          >
             聊天室
           </Link>
         </nav>

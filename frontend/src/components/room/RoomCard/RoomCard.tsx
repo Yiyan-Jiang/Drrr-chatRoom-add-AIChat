@@ -1,11 +1,16 @@
 /**
- * @parm 组件用途：展示单个聊天室卡片和进入入口。
+ * 展示单个聊天室卡片和进入入口。
  */
 import { Link } from 'react-router-dom'
 import type { Room } from '@/types/chat'
-import { formatAgeRange, formatCreatedAt } from '@/components/room/roomFormatters'
+import {
+  formatAgeRange,
+  formatCreatedAt,
+} from '@/components/room/roomFormatters'
 
+/** 房间卡片展示数据。 */
 interface RoomCardProps {
+  /** 待展示摘要并生成进入链接的房间。 */
   room: Room
 }
 
@@ -51,6 +56,7 @@ function UsersIcon() {
   )
 }
 
+/** 展示房间摘要、年龄范围、人数与创建时间，并提供进入链接。 */
 export default function RoomCard({ room }: RoomCardProps) {
   const onlineMembers = room.online_members ?? 0
 
@@ -67,18 +73,28 @@ export default function RoomCard({ room }: RoomCardProps) {
         <div className="min-w-0">
           <h3 className="truncate font-semibold text-white">{room.name}</h3>
 
-          <p className="mt-2 line-clamp-2 text-sm text-gray-300">{room.description || '暂无简介'}</p>
+          <p className="mt-2 line-clamp-2 text-sm text-gray-300">
+            {room.description || '暂无简介'}
+          </p>
 
           <div className="mt-4 flex min-h-7 items-center justify-center gap-3 text-sm text-white">
-            {room.tags.length > 0 ? room.tags.map((tag) => <span key={tag}>{tag}</span>) : <span>无标签</span>}
+            {room.tags.length > 0 ? (
+              room.tags.map((tag) => <span key={tag}>{tag}</span>)
+            ) : (
+              <span>无标签</span>
+            )}
 
-            <div className="max-h-3 border-l-2 border-white text-transparent">1</div>
+            <div className="max-h-3 border-l-2 border-white text-transparent">
+              1
+            </div>
 
             <div className="flex items-center justify-between gap-3">
               <div>{formatAgeRange(room)}</div>
             </div>
 
-            <div className="max-h-3 border-l-2 border-white text-transparent">1</div>
+            <div className="max-h-3 border-l-2 border-white text-transparent">
+              1
+            </div>
 
             <div className="hidden items-center justify-between gap-3 lg:flex">
               <div>{formatCreatedAt(room.created_at)}</div>
@@ -91,7 +107,9 @@ export default function RoomCard({ room }: RoomCardProps) {
         <div className="flex items-center justify-between gap-3 text-sm">
           <div className="flex items-center gap-1.5">
             <UsersIcon />
-            <span>{onlineMembers} / {room.max_members}</span>
+            <span>
+              {onlineMembers} / {room.max_members}
+            </span>
           </div>
         </div>
         <div className="h-7 w-[90%] rounded-md border border-white bg-black text-center leading-7 transition group-hover:scale-105">

@@ -1,3 +1,5 @@
+/** 展示帮助页面的占位标题。 */
+/** 展示帮助页面的占位标题。 */
 export default function HelpPage() {
   return (
     <div className="flex items-center justify-center h-96">

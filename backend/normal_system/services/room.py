@@ -1,3 +1,5 @@
+"""管理房间归属、资料变更和写事务。"""
+
 from datetime import datetime
 from typing import Optional
 
@@ -6,12 +8,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from normal_system.models import Room
 from normal_system.repositories.message import delete_messages_by_room
-from normal_system.repositories.room import add_room, get_room_by_id, remove_room, set_room_fields
+from normal_system.repositories.room import (
+    add_room,
+    get_room_by_id,
+    remove_room,
+    set_room_fields,
+)
 from normal_system.schemas import RoomCreate, RoomUpdate
 from tool.isUnion_name import is_duplicate_entry_error
 
 
-async def create_room(db: AsyncSession, room: RoomCreate, owner_id: int | None = None) -> Room:
+async def create_room(
+    db: AsyncSession, room: RoomCreate, owner_id: int | None = None
+) -> Room:
+    """创建房间并提交，名称冲突时抛出 ValueError。"""
     db_room = add_room(
         db,
         name=room.name,
@@ -43,6 +53,21 @@ async def update_room(
     room_update: RoomUpdate,
     requester_id: int,
 ) -> Optional[dict]:
+    """校验房主身份后更新房间资料并提交事务。
+
+    Args:
+        db: 查询和提交变更使用的数据库会话。
+        room_id: 待更新房间 ID。
+        room_update: 仅更新其中显式提供且非空的允许字段。
+        requester_id: 当前操作者 ID，必须为房主。
+
+    Returns:
+        允许更新的房间字段；房间不存在时返回 None。
+
+    Raises:
+        PermissionError: 操作者不是房主。
+        ValueError: 更新后的房间名称冲突。
+    """
     db_room = await get_room_by_id(db, room_id)
     if not db_room:
         return None
@@ -53,7 +78,11 @@ async def update_room(
     allowed_fields = ("name", "description", "notice", "rules")
     set_room_fields(
         db_room,
-        {field: payload[field] for field in allowed_fields if field in payload and payload[field] is not None},
+        {
+            field: payload[field]
+            for field in allowed_fields
+            if field in payload and payload[field] is not None
+        },
     )
     try:
         await db.commit()
@@ -70,6 +99,7 @@ async def update_room_peak_online_members(
     room_id: int,
     online_members: int,
 ) -> Optional[Room]:
+    """仅在当前在线人数超过已记录峰值时提交新峰值。"""
     db_room = await get_room_by_id(db, room_id)
     if not db_room:
         return None
@@ -86,10 +116,15 @@ async def delete_room(
     room_id: int,
     requester_id: int | None = None,
 ) -> bool:
+    """按现有归属规则校验请求者，删除房间及群聊消息并提交。"""
     db_room = await get_room_by_id(db, room_id)
     if not db_room:
         return False
-    if requester_id is not None and db_room.owner_id is not None and db_room.owner_id != requester_id:
+    if (
+        requester_id is not None
+        and db_room.owner_id is not None
+        and db_room.owner_id != requester_id
+    ):
         raise PermissionError("Only room owner can delete this room")
     await delete_messages_by_room(db, room_id)
     await remove_room(db, db_room)

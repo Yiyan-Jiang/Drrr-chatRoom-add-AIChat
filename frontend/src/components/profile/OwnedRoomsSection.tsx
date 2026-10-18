@@ -1,20 +1,28 @@
 /**
- * @parm 组件用途：展示当前用户创建的房间列表和空状态入口。
+ * 展示当前用户创建的房间列表和空状态入口。
  */
 import { Link } from 'react-router-dom'
 import type { Room } from '@/types/chat'
 import { formatProfileDate } from './profilePageModel'
 
+/** 当前用户自建房间展示数据。 */
 type OwnedRoomsSectionProps = {
+  /** 调用方提供的自建房间，组件不额外排序或截取。 */
   rooms: Room[]
 }
 
+/** 展示调用方传入的自建房间，并在列表为空时提供创建入口。 */
 export function OwnedRoomsSection({ rooms }: OwnedRoomsSectionProps) {
   return (
     <section className="mt-4 rounded-sm border border-zinc-700 bg-black/80">
       <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
-        <h2 className="text-sm font-semibold tracking-normal text-white">最近发布</h2>
-        <Link to="/home/rooms" className="text-xs text-zinc-400 transition hover:text-white">
+        <h2 className="text-sm font-semibold tracking-normal text-white">
+          最近发布
+        </h2>
+        <Link
+          to="/home/rooms"
+          className="text-xs text-zinc-400 transition hover:text-white"
+        >
           查看更多 〉
         </Link>
       </div>
@@ -46,7 +54,9 @@ export function OwnedRoomsSection({ rooms }: OwnedRoomsSectionProps) {
                   <span className="rounded-sm border border-zinc-600 px-2 py-0.5 text-xs text-zinc-300">
                     {room.tags[0] || '闲聊'}
                   </span>
-                  <h3 className="truncate text-base font-semibold text-zinc-100">{room.name}</h3>
+                  <h3 className="truncate text-base font-semibold text-zinc-100">
+                    {room.name}
+                  </h3>
                 </div>
                 <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-zinc-400">
                   {room.description || '夜猫子集合，慢慢聊。'}

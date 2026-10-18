@@ -1,10 +1,19 @@
+/** 按二级和三级标题生成可滚动的文章目录。 */
 import type { NewsHeading } from './newsTypes'
 
+/** 文章目录组件的输入属性。 */
 interface ArticleTocProps {
+  /** 按正文顺序排列的二级和三级标题。 */
   headings: NewsHeading[]
+  /** 点击目录链接时调用的可选回调。 */
   onNavigate?: () => void
 }
 
+/**
+ * 渲染分级目录链接；目录为空时不显示。
+ * @param props - 标题集合与可选导航回调。
+ * @returns 文章目录或 null。
+ */
 export default function ArticleToc({ headings, onNavigate }: ArticleTocProps) {
   if (headings.length === 0) {
     return null

@@ -1,3 +1,4 @@
+/** 维护头像与气泡图片的配对，并解析头像资源。 */
 import adminAvatar from './icon/avater/admin/icon_admin.png'
 import adminBubble from './icon/avater/admin/orange.png'
 import grayAvatar from './icon/avater/gray/icon_gray.png'
@@ -16,25 +17,44 @@ import zawaAvatar from './icon/avater/zawa/icon_zawa.png'
 import zawaBubble from './icon/avater/zawa/green.png'
 import type { AvatarKey } from '@/types/user'
 
+/** 同一头像主题的头像与聊天气泡图片地址。 */
 type ChatAvatarAssets = {
+  /** 头像图片地址。 */
   avatar: string
+  /** 聊天气泡图片地址。 */
   bubble: string
 }
 
 const fallbackKey: AvatarKey = 'kanra'
 
+/** 内置头像主题与图片资源的映射。 */
 export const chatAvatarCatalog: Record<AvatarKey, ChatAvatarAssets> = {
+  /** admin 主题的头像与气泡图片。 */
   admin: { avatar: adminAvatar, bubble: adminBubble },
+  /** gray 主题的头像与气泡图片。 */
   gray: { avatar: grayAvatar, bubble: grayBubble },
+  /** kanra 主题的头像与气泡图片。 */
   kanra: { avatar: kanraAvatar, bubble: kanraBubble },
+  /** pink 主题的头像与气泡图片。 */
   pink: { avatar: pinkAvatar, bubble: pinkBubble },
+  /** setton 主题的头像与气泡图片。 */
   setton: { avatar: settonAvatar, bubble: settonBubble },
+  /** tanaka 主题的头像与气泡图片。 */
   tanaka: { avatar: tanakaAvatar, bubble: tanakaBubble },
+  /** zaika 主题的头像与气泡图片。 */
   zaika: { avatar: zaikaAvatar, bubble: zaikaBubble },
+  /** zawa 主题的头像与气泡图片。 */
   zawa: { avatar: zawaAvatar, bubble: zawaBubble },
 }
 
-export function resolveChatAvatarAssets(avatarKey?: string | null): ChatAvatarAssets {
+/**
+ * 解析头像主题；键缺失或不在目录时使用默认主题。
+ * @param avatarKey - 用户资料中的头像主题键。
+ * @returns 同一主题的头像和气泡图片地址。
+ */
+export function resolveChatAvatarAssets(
+  avatarKey?: string | null,
+): ChatAvatarAssets {
   if (avatarKey && avatarKey in chatAvatarCatalog) {
     return chatAvatarCatalog[avatarKey as AvatarKey]
   }

@@ -1,3 +1,5 @@
+"""处理群聊加入、离开与消息发送事件。"""
+
 from common.normal_database import async_session
 from normal_system.repositories.user import get_user_by_id
 from normal_system.repositories.room import get_room_by_id
@@ -14,6 +16,7 @@ from normal_system.realtime.server import room_presence, sio
 
 
 async def join_room(sid: str, data: dict):
+    """登记连接进入房间，更新在线数据并发送系统消息与历史。"""
     room_id = data.get("room_id")
     if not _is_strict_int(room_id):
         await sio.emit("error", {"message": "room_id must be an integer"}, to=sid)
@@ -44,15 +47,12 @@ async def join_room(sid: str, data: dict):
             room=room_name,
             skip_sid=sid,
         )
-        try:
-            async with async_session() as db:
-                await update_room_peak_online_members(
-                    db,
-                    room_id,
-                    len(room_presence.members(room_id)),
-                )
-        except Exception as exc:
-            print(f"Failed to update room peak online members: {exc}")
+        async with async_session() as db:
+            await update_room_peak_online_members(
+                db,
+                room_id,
+                len(room_presence.members(room_id)),
+            )
         async with async_session() as db:
             user = await get_user_by_id(db, user_id)
             if user:
@@ -81,6 +81,7 @@ async def join_room(sid: str, data: dict):
 
 
 async def send_message(sid: str, data: dict):
+    """校验消息输入，持久化后向发送方确认并向房间广播。"""
     room_id = data.get("room_id")
     content = data.get("content")
     client_message_id = data.get("client_message_id")
@@ -133,6 +134,7 @@ async def send_message(sid: str, data: dict):
 
 
 async def leave_room(sid: str, data: dict):
+    """移除房间连接记录并广播成员变化，最后连接离开时写入系统消息。"""
     room_id = data.get("room_id")
     if _is_strict_int(room_id):
         room_id = int(room_id)

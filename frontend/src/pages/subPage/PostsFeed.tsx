@@ -1,11 +1,14 @@
+/** 加载帖子列表并提供发帖入口，创建成功后进入帖子详情。 */
 import { useNavigate } from 'react-router-dom'
 import PostCard from '@/components/posts/PostCard'
 import PostEditor from '@/components/posts/PostEditor'
 import { usePosts } from '@/hooks/usePosts'
 
+/** 加载帖子列表并提供发帖入口，创建成功后进入帖子详情。 */
 export default function PostsFeed() {
   const navigate = useNavigate()
-  const { posts, loadState, errorMessage, isCreating, loadPosts, createPost } = usePosts()
+  const { posts, loadState, errorMessage, isCreating, loadPosts, createPost } =
+    usePosts()
 
   const handleCreate = async (payload: { title: string; content: string }) => {
     const created = await createPost(payload)

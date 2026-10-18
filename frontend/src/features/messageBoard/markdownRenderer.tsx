@@ -1,9 +1,12 @@
+/** 为留言板 Markdown 配置链接、代码块和文本排版。 */
 import { MarkdownHooks } from 'react-markdown'
 import rehypePrettyCode from 'rehype-pretty-code'
 import remarkGfm from 'remark-gfm'
 import type { Components } from 'react-markdown'
 
+/** 留言板 Markdown 渲染器的输入属性。 */
 type MessageBoardMarkdownRendererProps = {
+  /** 待渲染的 Markdown 源文本。 */
   markdown: string
 }
 
@@ -14,6 +17,11 @@ const prettyCodeOptions = {
 
 const SAFE_URL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:'])
 
+/**
+ * 允许页内锚点、相对地址以及 http、https 和 mailto 链接，其余地址返回 undefined。
+ * @param url - Markdown 提供的链接或图片地址。
+ * @returns 去除首尾空白的可用地址，或 undefined。
+ */
 function sanitizeUrl(url: string | undefined): string | undefined {
   if (!url) {
     return undefined
@@ -22,10 +30,10 @@ function sanitizeUrl(url: string | undefined): string | undefined {
   const trimmed = url.trim()
 
   if (
-    trimmed.startsWith('#')
-    || trimmed.startsWith('/')
-    || trimmed.startsWith('./')
-    || trimmed.startsWith('../')
+    trimmed.startsWith('#') ||
+    trimmed.startsWith('/') ||
+    trimmed.startsWith('./') ||
+    trimmed.startsWith('../')
   ) {
     return trimmed
   }
@@ -36,7 +44,7 @@ function sanitizeUrl(url: string | undefined): string | undefined {
       return trimmed
     }
   } catch {
-    // Unparseable URLs are treated as unsafe.
+    // 无法解析的 URL 不作为可用链接。
   }
 
   return undefined
@@ -62,13 +70,19 @@ const components: Components = {
     <p className="text-sm leading-6 text-zinc-300">{children}</p>
   ),
   h1: ({ children }) => (
-    <h1 className="text-base font-semibold leading-6 text-zinc-100">{children}</h1>
+    <h1 className="text-base font-semibold leading-6 text-zinc-100">
+      {children}
+    </h1>
   ),
   h2: ({ children }) => (
-    <h2 className="text-base font-semibold leading-6 text-zinc-100">{children}</h2>
+    <h2 className="text-base font-semibold leading-6 text-zinc-100">
+      {children}
+    </h2>
   ),
   h3: ({ children }) => (
-    <h3 className="text-sm font-semibold leading-6 text-zinc-100">{children}</h3>
+    <h3 className="text-sm font-semibold leading-6 text-zinc-100">
+      {children}
+    </h3>
   ),
   ul: ({ children }) => (
     <ul className="list-disc space-y-1 pl-5 text-sm leading-6 text-zinc-300">
@@ -87,8 +101,15 @@ const components: Components = {
   ),
   code: ({ children, className, node: _node, ...props }) => {
     void _node
-    const isBlock = Boolean(className?.includes('language-'))
-      || Boolean((props as { 'data-language'?: string })['data-language'])
+    const isBlock =
+      Boolean(className?.includes('language-')) ||
+      Boolean(
+        (
+          props as {
+            /** 代码高亮插件写入的代码块语言标识。 */ 'data-language'?: string
+          }
+        )['data-language'],
+      )
 
     return isBlock ? (
       <code className="block text-zinc-200">{children}</code>
@@ -99,7 +120,7 @@ const components: Components = {
     )
   },
   pre: ({ children, node: _node, ...props }) => {
-    void _node // Keep the Markdown AST node out of DOM props.
+    void _node // Markdown 语法树节点不传给 DOM 属性。
     return (
       <pre
         {...props}
@@ -130,18 +151,34 @@ const components: Components = {
       return <>{alt}</>
     }
 
-    return <img className="max-h-48 rounded border border-zinc-800" src={safeSrc} alt={alt} loading="lazy" />
+    return (
+      <img
+        className="max-h-48 rounded border border-zinc-800"
+        src={safeSrc}
+        alt={alt}
+        loading="lazy"
+      />
+    )
   },
   hr: () => <hr className="border-zinc-800" />,
 }
 
-export function MessageBoardMarkdownRenderer({ markdown }: MessageBoardMarkdownRendererProps) {
+/**
+ * 渲染留言板 Markdown，启用 GFM 与代码高亮并筛选链接地址。
+ * @param props - 留言 Markdown 正文。
+ * @returns 异步 Markdown 渲染组件。
+ */
+export function MessageBoardMarkdownRenderer({
+  markdown,
+}: MessageBoardMarkdownRendererProps) {
   return (
     <MarkdownHooks
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[[rehypePrettyCode, prettyCodeOptions]]}
       components={components}
-      fallback={<div className="text-sm leading-6 text-zinc-300">Loading...</div>}
+      fallback={
+        <div className="text-sm leading-6 text-zinc-300">Loading...</div>
+      }
     >
       {markdown}
     </MarkdownHooks>

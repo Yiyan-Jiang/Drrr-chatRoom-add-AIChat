@@ -1,10 +1,12 @@
+"""创建共用 Socket.IO 服务和进程内在线状态容器。"""
+
 from socketio import AsyncServer
 
 from normal_system.services.room_presence import RoomPresence
 
 sio: AsyncServer = AsyncServer(
-    async_mode='asgi',
-    cors_allowed_origins='*',
+    async_mode="asgi",
+    cors_allowed_origins="*",
     ping_interval=25,
     ping_timeout=20,
 )

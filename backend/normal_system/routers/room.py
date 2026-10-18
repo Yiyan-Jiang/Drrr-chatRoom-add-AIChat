@@ -1,10 +1,18 @@
+"""提供房间查询、房主操作和在线人数的 HTTP 入口。"""
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
 from common.dependencies import get_current_user_id
 from common.normal_database import get_db
-from normal_system.schemas import RoomCreate, RoomInDB, RoomOwner, RoomUpdate, RoomWithMessages
+from normal_system.schemas import (
+    RoomCreate,
+    RoomInDB,
+    RoomOwner,
+    RoomUpdate,
+    RoomWithMessages,
+)
 from normal_system.repositories import (
     get_user_by_id,
     get_room_by_id,
@@ -21,6 +29,7 @@ router = APIRouter(prefix="/rooms", tags=["rooms"])
 
 
 async def _to_room_response(db: AsyncSession, room) -> RoomInDB:
+    """组合房间资料、房主公开资料和当前进程内的在线人数。"""
     owner = await get_user_by_id(db, room.owner_id) if room.owner_id else None
     return RoomInDB(
         id=room.id,
@@ -42,10 +51,11 @@ async def _to_room_response(db: AsyncSession, room) -> RoomInDB:
 
 @router.post("/", response_model=RoomInDB, status_code=status.HTTP_201_CREATED)
 async def create_new_room(
-        room: RoomCreate,
-        db: AsyncSession = Depends(get_db),
-        user_id: int = Depends(get_current_user_id),
+    room: RoomCreate,
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
 ):
+    """以当前用户为房主创建房间并返回展示资料。"""
     try:
         db_room = await create_room(db, room, owner_id=user_id)
         owner = await get_user_by_id(db, user_id)
@@ -71,33 +81,39 @@ async def create_new_room(
 
 @router.get("/", response_model=List[RoomInDB])
 async def list_rooms(
-        db: AsyncSession = Depends(get_db),
-        skip: int = Query(0, ge=0, description="跳过多少条"),
-        limit: int = Query(50, ge=1, le=200, description="最多返回多少条"),
+    db: AsyncSession = Depends(get_db),
+    skip: int = Query(0, ge=0, description="跳过多少条"),
+    limit: int = Query(50, ge=1, le=200, description="最多返回多少条"),
 ):
+    """按偏移量返回房间及房主资料列表。"""
     rooms = await get_all_rooms(db, skip=skip, limit=limit)
     return [await _to_room_response(db, room) for room in rooms]
 
 
 @router.get("/mine", response_model=List[RoomInDB])
 async def list_my_rooms(
-        db: AsyncSession = Depends(get_db),
-        user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
 ):
+    """返回当前登录用户创建的全部房间。"""
     rooms = await get_rooms_by_owner(db, owner_id=user_id)
     return [await _to_room_response(db, room) for room in rooms]
 
 
 @router.get("/viewers/count")
 async def get_room_viewer_count():
+    """返回当前进程内仍留在房间中的去重在线用户总数。"""
     return {"total": room_presence.total_viewers()}
 
 
 @router.get("/name/{name}", response_model=RoomInDB)
 async def get_room_by_name_endpoint(name: str, db: AsyncSession = Depends(get_db)):
+    """按名称读取房间展示资料，不存在时返回 HTTP 404。"""
     room = await get_room_by_name(db, name)
     if not room:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Room not found"
+        )
     owner = await get_user_by_id(db, room.owner_id) if room.owner_id else None
     return RoomInDB(
         id=room.id,
@@ -119,9 +135,12 @@ async def get_room_by_name_endpoint(name: str, db: AsyncSession = Depends(get_db
 
 @router.get("/{room_id:int}", response_model=RoomWithMessages)
 async def get_room_detail(room_id: int, db: AsyncSession = Depends(get_db)):
+    """返回房间资料和最近消息，不存在时返回 HTTP 404。"""
     room = await get_room_by_id(db, room_id)
     if not room:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Room not found"
+        )
 
     messages = await get_message_by_room(db, room_id)
     owner = await get_user_by_id(db, room.owner_id) if room.owner_id else None
@@ -147,11 +166,12 @@ async def get_room_detail(room_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.patch("/{room_id:int}")
 async def update_existing_room(
-        room_id: int,
-        room_update: RoomUpdate,
-        db: AsyncSession = Depends(get_db),
-        user_id: int = Depends(get_current_user_id),
+    room_id: int,
+    room_update: RoomUpdate,
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
 ):
+    """校验房主身份后更新房间资料，并转换业务错误为 HTTP 错误。"""
     try:
         updated = await update_room(db, room_id, room_update, requester_id=user_id)
     except PermissionError as e:
@@ -159,21 +179,26 @@ async def update_existing_room(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     if updated is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Room not found"
+        )
     return updated
 
 
 @router.delete("/{room_id:int}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_existing_room(
-        room_id: int,
-        db: AsyncSession = Depends(get_db),
-        user_id: int = Depends(get_current_user_id),
+    room_id: int,
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
 ):
+    """校验权限并删除房间，清理在线记录后广播删除通知。"""
     try:
         success = await delete_room(db, room_id, requester_id=user_id)
     except PermissionError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     if not success:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Room not found"
+        )
     room_presence.clear_room(room_id)
     await emit_room_deleted(room_id)

@@ -1,3 +1,4 @@
+/** 定义应用路由、页面延迟加载和登录状态守卫。 */
 /* eslint-disable react-refresh/only-export-components */
 import { lazy } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
@@ -19,21 +20,35 @@ const HelpPage = lazy(() => import('../pages/subPage/HelpPage'))
 const RoomList = lazy(() => import('../pages/subPage/RoomList'))
 const RoomSelect = lazy(() => import('../pages/subPage/RoomSelect'))
 const NewsFeed = lazy(() => import('../pages/subPage/NewsFeed'))
-const NewsArticleDetail = lazy(() => import('../pages/subPage/NewsArticleDetail'))
+const NewsArticleDetail = lazy(
+  () => import('../pages/subPage/NewsArticleDetail'),
+)
 const MessageBoard = lazy(() => import('../pages/subPage/MessageBoard'))
-const MessageBoardIssueDetail = lazy(() => import('../pages/subPage/MessageBoardIssueDetail'))
+const MessageBoardIssueDetail = lazy(
+  () => import('../pages/subPage/MessageBoardIssueDetail'),
+)
 const PostsFeed = lazy(() => import('../pages/subPage/PostsFeed'))
 const PostDetail = lazy(() => import('../pages/subPage/PostDetail'))
 const ChatRoom = lazy(() => import('../pages/room/ChatRoom'))
 const PrivateChat = lazy(() => import('../pages/room/PrivateChat'))
 const NotFound = lazy(() => import('../pages/NotFound'))
 
-function RequireAuth({ children }: { children: React.ReactElement }) {
+/**
+ * 等待认证校验结束，再显示子页面或跳转登录页。
+ * @param props - 需要登录状态的页面内容。
+ * @returns 校验期间为空，校验后返回页面或跳转组件。
+ */
+function RequireAuth({
+  children,
+}: {
+  /** 认证校验通过后显示的受保护页面。 */ children: React.ReactElement
+}) {
   const { isAuthenticated, isAuthChecking } = useAuth()
   if (isAuthChecking) return null
   return isAuthenticated ? children : <Navigate to="/login" replace />
 }
 
+/** 包含入口验证、登录守卫及延迟加载页面的应用路由。 */
 export const router = createBrowserRouter([
   {
     path: '/',

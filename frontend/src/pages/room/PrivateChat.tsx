@@ -1,3 +1,4 @@
+/** 按路由好友 ID 连接私聊状态，组合消息区、发送区与返回入口。 */
 import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
@@ -8,12 +9,17 @@ import ChatRoomHeader from '@/components/chat/ChatRoomHeader'
 import PageState from '@/components/common/PageState'
 import { getUserDisplayName } from '@/utils/userDisplayName'
 
+/** 按路由好友 ID 连接私聊状态，组合消息区、发送区与返回入口。 */
 export default function PrivateChat() {
   const { friendId } = useParams<{ friendId: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const friendIdNum = useMemo(() => Number.parseInt(friendId || '0', 10), [friendId])
-  const { containerRef, handleScroll, isNearHead, scrollToHead } = useChatScroll()
+  const friendIdNum = useMemo(
+    () => Number.parseInt(friendId || '0', 10),
+    [friendId],
+  )
+  const { containerRef, handleScroll, isNearHead, scrollToHead } =
+    useChatScroll()
   const chat = usePrivateChat(friendIdNum, user, isNearHead, scrollToHead)
 
   if (!friendIdNum || Number.isNaN(friendIdNum)) {

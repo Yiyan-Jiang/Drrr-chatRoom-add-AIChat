@@ -1,3 +1,4 @@
+/** 管理房间列表查询、筛选排序及创建表单。 */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { roomApi } from '@/api/rooms'
@@ -9,6 +10,11 @@ import { filterRoomsByName } from '@/components/room/roomSearch'
 const DEFAULT_MAX_MEMBERS = 20
 const ROOM_NAME_PATTERN = /^[\u4e00-\u9fa5A-Za-z0-9_]{1,8}$/
 
+/**
+ * 按逗号拆分建房表单的标签，去除首尾空白并过滤空项。
+ * @param value - 建房标签输入框文本。
+ * @returns 待提交的房间标签数组。
+ */
 function parseTags(value: string) {
   return value
     .split(',')
@@ -16,10 +22,19 @@ function parseTags(value: string) {
     .filter(Boolean)
 }
 
+/**
+ * 将空白输入转换为 null，其他文本交给 Number 转换，数值有效性由调用方检查。
+ * @param value - 年龄输入框文本。
+ * @returns 数值、NaN 或表示未设置的 null。
+ */
 function parseOptionalNumber(value: string) {
   return value.trim() === '' ? null : Number(value)
 }
 
+/**
+ * 载入前 50 个房间与在线浏览人数，并管理搜索、排序和创建表单。
+ * @returns 可见房间、查询状态、表单字段及刷新、筛选和创建操作。
+ */
 export function useRooms() {
   const [rooms, setRooms] = useState<Room[]>([])
   const [loading, setLoading] = useState(true)
@@ -35,13 +50,21 @@ export function useRooms() {
   const [searchQuery, setSearchQuery] = useState('')
   const [totalOnlineMembers, setTotalOnlineMembers] = useState(0)
 
-  const filteredRooms = useMemo(() => filterRoomsByName(rooms, searchQuery), [rooms, searchQuery])
-  const visibleRooms = useMemo(() => sortRooms(filteredRooms, sortKey), [filteredRooms, sortKey])
+  const filteredRooms = useMemo(
+    () => filterRoomsByName(rooms, searchQuery),
+    [rooms, searchQuery],
+  )
+  const visibleRooms = useMemo(
+    () => sortRooms(filteredRooms, sortKey),
+    [filteredRooms, sortKey],
+  )
 
+  /** 将输入框文本应用为当前房间名称查询条件。 */
   const submitSearch = useCallback(() => {
     setSearchQuery(searchInput)
   }, [searchInput])
 
+  /** 并行刷新前 50 个房间和在线浏览人数；失败时显示 API 错误提示。 */
   const fetchRooms = useCallback(async () => {
     try {
       setLoading(true)
@@ -74,6 +97,7 @@ export function useRooms() {
     setMaxMembers(String(DEFAULT_MAX_MEMBERS))
   }
 
+  /** 校验当前建房表单，成功创建后清空表单并重新查询房间。 */
   const createRoom = async () => {
     const name = newRoomName.trim()
     if (!name) {
@@ -102,7 +126,11 @@ export function useRooms() {
       return
     }
 
-    if (minAgeValue !== null && maxAgeValue !== null && minAgeValue > maxAgeValue) {
+    if (
+      minAgeValue !== null &&
+      maxAgeValue !== null &&
+      minAgeValue > maxAgeValue
+    ) {
       toast.error('最小年龄不能大于最大年龄')
       return
     }

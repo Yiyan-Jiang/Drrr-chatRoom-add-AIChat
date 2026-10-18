@@ -1,24 +1,39 @@
 /**
- * @parm 组件用途：展示普通聊天室顶部房间信息和输入栏。
+ * 普通聊天与私聊共用的标题、状态和输入栏。
  */
 import ChatComposer from '@/components/chat/ChatComposer'
 
+/** 聊天页标题、消息输入和房间操作配置。 */
 interface ChatRoomHeaderProps {
+  /** 标题中展示的房间或会话名称。 */
   roomName: string
+  /** 默认副标题使用的房间编号。 */
   roomId: number
+  /** 父组件维护的消息草稿。 */
   composerValue: string
+  /** 未提供状态文案时显示重连提示。 */
   reconnecting?: boolean
+  /** 禁用消息输入与发送。 */
   composerDisabled?: boolean
+  /** 资料按钮文字及无障碍名称，默认“简介”。 */
   infoLabel?: string
+  /** 离开按钮文字，默认“退出”。 */
   leaveLabel?: string
+  /** 优先展示的连接状态文案。 */
   statusText?: string
+  /** 覆盖默认房间编号的副标题。 */
   subtitle?: string
+  /** 接收新的消息草稿。 */
   onComposerChange: (value: string) => void
+  /** 提交当前消息草稿。 */
   onSubmit: () => void
+  /** 处理离开当前会话的操作。 */
   onLeaveRoom: () => void
+  /** 打开房间或会话资料。 */
   onOpenInfo: () => void
 }
 
+/** 组合房间标题、状态、操作按钮与消息输入区。 */
 export default function ChatRoomHeader({
   roomName,
   roomId,
@@ -54,11 +69,17 @@ export default function ChatRoomHeader({
             {infoLabel}
           </button>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-sm font-semibold text-zinc-100">{roomName}</h1>
-            <p className="text-xs text-zinc-500">{subtitle ?? `room #${roomId}`}</p>
+            <h1 className="truncate text-sm font-semibold text-zinc-100">
+              {roomName}
+            </h1>
+            <p className="text-xs text-zinc-500">
+              {subtitle ?? `room #${roomId}`}
+            </p>
           </div>
           {statusText || reconnecting ? (
-            <span className="text-xs text-amber-300">{statusText ?? 'reconnecting'}</span>
+            <span className="text-xs text-amber-300">
+              {statusText ?? 'reconnecting'}
+            </span>
           ) : null}
         </div>
 

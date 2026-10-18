@@ -1,19 +1,27 @@
 /**
- * @parm 组件用途：展示注册表单并把输入和提交事件交给上层。
+ * 展示注册表单并把输入和提交事件交给上层。
  */
 import AuthTextInput from '@/components/auth/AuthTextInput'
 import type { RegisterRequest } from '@/types/auth'
 import type { ChangeEvent, FormEvent } from 'react'
 
+/** 注册表单字段与提交回调。 */
 interface RegisterFormProps {
+  /** 当前注册凭据。 */
   form: RegisterRequest
+  /** 用于二次确认的密码输入。 */
   confirmPassword: string
+  /** 请求中标记，用于禁用输入和提交。 */
   loading: boolean
+  /** 接收用户名或密码字段变更。 */
   onChange: (event: ChangeEvent<HTMLInputElement>) => void
+  /** 接收确认密码字段变更。 */
   onConfirmChange: (event: ChangeEvent<HTMLInputElement>) => void
+  /** 接收表单提交事件，密码一致性检查由调用方负责。 */
   onSubmit: (event: FormEvent) => void
 }
 
+/** 展示注册凭据和确认密码输入，把校验与提交处理交给调用方。 */
 export default function RegisterForm({
   form,
   confirmPassword,

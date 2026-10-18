@@ -1,15 +1,22 @@
 /**
- * @parm 组件用途：展示房间搜索、排序和刷新工具栏。
+ * 展示房间搜索、排序和刷新工具栏。
  */
 import type { ChangeEvent, FormEvent } from 'react'
 import type { RoomSortKey } from '@/components/room/roomSort'
 
+/** 房间搜索和排序工具栏的受控值与回调。 */
 interface RoomFilterBarProps {
+  /** 当前选择的房间排序方式。 */
   sortKey: RoomSortKey
+  /** 当前编辑中的房间名搜索词。 */
   searchInput: string
+  /** 选择其他排序方式时调用。 */
   onSortChange: (sortKey: RoomSortKey) => void
+  /** 接收编辑中的搜索词。 */
   onSearchInputChange: (value: string) => void
+  /** 提交搜索词时调用，筛选由调用方处理。 */
   onSearchSubmit: () => void
+  /** 请求刷新房间列表。 */
   onRefresh: () => void
 }
 
@@ -22,6 +29,7 @@ const sortOptions: { value: RoomSortKey; label: string }[] = [
   { value: 'max_age_desc', label: '最大年龄' },
 ]
 
+/** 展示受控搜索与排序输入，并转发搜索提交和刷新操作。 */
 export default function RoomFilterBar({
   sortKey,
   searchInput,
@@ -71,7 +79,10 @@ export default function RoomFilterBar({
           ))}
         </select>
       </label>
-      <button onClick={onRefresh} className="rounded-md border border-white px-1 lg:w-20 lg:px-5 active:scale-95">
+      <button
+        onClick={onRefresh}
+        className="rounded-md border border-white px-1 lg:w-20 lg:px-5 active:scale-95"
+      >
         更新
       </button>
     </div>

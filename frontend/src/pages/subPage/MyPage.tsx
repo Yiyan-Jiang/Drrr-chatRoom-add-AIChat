@@ -1,5 +1,5 @@
 /**
- * @parm 组件用途：装配我的页面的数据加载、用户操作和资料展示组件。
+ * 装配我的页面的数据加载、用户操作和资料展示组件。
  */
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -25,7 +25,9 @@ import type { Room } from '@/types/chat'
 import type { FriendRequest } from '@/types/friends'
 import { logger } from '@/utils/logger'
 
-type ProfileTab = 'profile' | 'posts' | 'comments' | 'favorites' | 'likes' | 'settings'
+/** 我的页面支持的资料、帖子互动与设置标签。 */
+type ProfileTab =
+  'profile' | 'posts' | 'comments' | 'favorites' | 'likes' | 'settings'
 
 const profileTabs: Array<{ key: ProfileTab; label: string }> = [
   { key: 'profile', label: '个人资料' },
@@ -36,6 +38,7 @@ const profileTabs: Array<{ key: ProfileTab; label: string }> = [
   { key: 'settings', label: '设置' },
 ]
 
+/** 按本地时区展示帖子或评论更新的月日和时分。 */
 function formatPostDate(value: string): string {
   return new Intl.DateTimeFormat('zh-CN', {
     month: '2-digit',
@@ -45,10 +48,12 @@ function formatPostDate(value: string): string {
   }).format(new Date(value))
 }
 
+/** 仅保留仍待处理的好友申请。 */
 function filterPendingFriendRequests(requests: FriendRequest[]) {
   return requests.filter((request) => request.status === 'pending')
 }
 
+/** 管理当前用户资料编辑、账号确认操作和自建房间展示。 */
 export default function MyPage() {
   const { user, updateUser, logout } = useAuth()
   const navigate = useNavigate()
@@ -58,8 +63,12 @@ export default function MyPage() {
   const [favoritePosts, setFavoritePosts] = useState<PostListItem[]>([])
   const [likedPosts, setLikedPosts] = useState<PostListItem[]>([])
   const [postComments, setPostComments] = useState<PostCommentListItem[]>([])
-  const [incomingFriendRequests, setIncomingFriendRequests] = useState<FriendRequest[]>([])
-  const [outgoingFriendRequests, setOutgoingFriendRequests] = useState<FriendRequest[]>([])
+  const [incomingFriendRequests, setIncomingFriendRequests] = useState<
+    FriendRequest[]
+  >([])
+  const [outgoingFriendRequests, setOutgoingFriendRequests] = useState<
+    FriendRequest[]
+  >([])
   const [activeTab, setActiveTab] = useState<ProfileTab>('profile')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -73,7 +82,16 @@ export default function MyPage() {
 
     async function loadProfile() {
       try {
-        const [currentUser, rooms, posts, favorites, comments, likes, incomingRequests, outgoingRequests] = await Promise.all([
+        const [
+          currentUser,
+          rooms,
+          posts,
+          favorites,
+          comments,
+          likes,
+          incomingRequests,
+          outgoingRequests,
+        ] = await Promise.all([
           usersApi.getMe(),
           roomApi.listMine(),
           postsApi.listMine({ limit: 20 }),
@@ -90,8 +108,12 @@ export default function MyPage() {
         setFavoritePosts(favorites.items)
         setLikedPosts(likes.items)
         setPostComments(comments.items)
-        setIncomingFriendRequests(filterPendingFriendRequests(incomingRequests.items))
-        setOutgoingFriendRequests(filterPendingFriendRequests(outgoingRequests.items))
+        setIncomingFriendRequests(
+          filterPendingFriendRequests(incomingRequests.items),
+        )
+        setOutgoingFriendRequests(
+          filterPendingFriendRequests(outgoingRequests.items),
+        )
         setForm(toProfileForm(currentUser))
       } catch (error) {
         logger.error('[profile] failed to load current user', {
@@ -140,7 +162,11 @@ export default function MyPage() {
     normalizedForm.bio !== (user?.bio || '') ||
     normalizedForm.avatarKey !== (user?.avatar_key ?? '')
   const canSave =
-    normalizedForm.nickname.length > 0 && normalizedForm.bio.length <= 200 && hasChanges && !saving && !deletingAccount
+    normalizedForm.nickname.length > 0 &&
+    normalizedForm.bio.length <= 200 &&
+    hasChanges &&
+    !saving &&
+    !deletingAccount
 
   const handleSave = async () => {
     if (!normalizedForm.nickname) {
@@ -157,7 +183,9 @@ export default function MyPage() {
       const updatedUser = await usersApi.updateMe({
         nickname: normalizedForm.nickname,
         bio: normalizedForm.bio,
-        ...(normalizedForm.avatarKey ? { avatar_key: normalizedForm.avatarKey } : {}),
+        ...(normalizedForm.avatarKey
+          ? { avatar_key: normalizedForm.avatarKey }
+          : {}),
       })
       updateUser(updatedUser)
       setForm(toProfileForm(updatedUser))
@@ -217,8 +245,12 @@ export default function MyPage() {
       friendsApi.listRequests('incoming'),
       friendsApi.listRequests('outgoing'),
     ])
-    setIncomingFriendRequests(filterPendingFriendRequests(incomingRequests.items))
-    setOutgoingFriendRequests(filterPendingFriendRequests(outgoingRequests.items))
+    setIncomingFriendRequests(
+      filterPendingFriendRequests(incomingRequests.items),
+    )
+    setOutgoingFriendRequests(
+      filterPendingFriendRequests(outgoingRequests.items),
+    )
   }
 
   const handleAcceptFriendRequest = async (requestId: number) => {
@@ -252,7 +284,12 @@ export default function MyPage() {
   const confirmDialog = buildConfirmDialog(confirmAction, deletingAccount)
   const profileRows = [
     ['用户ID', String(user?.id ?? '-')],
-    ['注册日', user?.created_at ? new Intl.DateTimeFormat('zh-CN').format(new Date(user.created_at)) : '-'],
+    [
+      '注册日',
+      user?.created_at
+        ? new Intl.DateTimeFormat('zh-CN').format(new Date(user.created_at))
+        : '-',
+    ],
     ['最后登录', '在线'],
     ['地区', '未公开'],
     ['一句话', user?.bio?.trim() || '夜晚很安静，想和某个人聊聊天。'],
@@ -308,28 +345,42 @@ export default function MyPage() {
               ))}
             </nav>
 
-            <section className={`${activeTab === 'profile' ? 'mt-4' : 'hidden'} rounded-sm border border-zinc-700 bg-black/80 p-5`}>
+            <section
+              className={`${activeTab === 'profile' ? 'mt-4' : 'hidden'} rounded-sm border border-zinc-700 bg-black/80 p-5`}
+            >
               <h2 className="text-sm font-semibold text-white">自我介绍</h2>
               <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-zinc-300">
-                {user?.bio?.trim() || '刚开始使用 DOLLARS。\n喜欢在安静的夜晚和大家慢慢聊天。'}
+                {user?.bio?.trim() ||
+                  '刚开始使用 DOLLARS。\n喜欢在安静的夜晚和大家慢慢聊天。'}
               </p>
             </section>
 
-            {activeTab === 'profile' && <OwnedRoomsSection rooms={ownedRooms} />}
+            {activeTab === 'profile' && (
+              <OwnedRoomsSection rooms={ownedRooms} />
+            )}
 
             {activeTab === 'comments' && (
               <section className="mt-4 rounded-sm border border-zinc-700 bg-black/80">
-                <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold text-white">我的评论</h2>
+                <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold text-white">
+                  我的评论
+                </h2>
                 {postComments.length === 0 ? (
-                  <p className="px-4 py-8 text-center text-sm text-zinc-500">还没有发表过帖子评论。</p>
+                  <p className="px-4 py-8 text-center text-sm text-zinc-500">
+                    还没有发表过帖子评论。
+                  </p>
                 ) : (
                   <ul className="divide-y divide-zinc-800">
                     {postComments.map((comment) => (
                       <li key={comment.id} className="px-4 py-4">
-                        <Link className="block transition hover:text-white" to={`/posts/${comment.post_id}`}>
+                        <Link
+                          className="block transition hover:text-white"
+                          to={`/posts/${comment.post_id}`}
+                        >
                           <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                             <span>评论于</span>
-                            <span className="max-w-full truncate text-zinc-300">{comment.post_title}</span>
+                            <span className="max-w-full truncate text-zinc-300">
+                              {comment.post_title}
+                            </span>
                             <span>{formatPostDate(comment.updated_at)}</span>
                           </div>
                           <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm leading-6 text-zinc-200">
@@ -365,22 +416,24 @@ export default function MyPage() {
 
             {activeTab === 'posts' && (
               <section className="mt-4 flex flex-col gap-3">
-                <h2 className="text-sm font-semibold text-white">我发布的帖子</h2>
+                <h2 className="text-sm font-semibold text-white">
+                  我发布的帖子
+                </h2>
                 {myPosts.length === 0 ? (
                   <div className="rounded-sm border border-zinc-700 bg-black/80 px-4 py-8 text-center text-sm text-zinc-500">
                     还没有发布帖子。
                   </div>
                 ) : (
-                  myPosts.map((post) => (
-                    <PostCard key={post.id} post={post} />
-                  ))
+                  myPosts.map((post) => <PostCard key={post.id} post={post} />)
                 )}
               </section>
             )}
 
             {activeTab === 'likes' && (
               <section className="mt-4 flex flex-col gap-3">
-                <h2 className="text-sm font-semibold text-white">我喜欢的帖子</h2>
+                <h2 className="text-sm font-semibold text-white">
+                  我喜欢的帖子
+                </h2>
                 {likedPosts.length === 0 ? (
                   <div className="rounded-sm border border-zinc-700 bg-black/80 px-4 py-8 text-center text-sm text-zinc-500">
                     还没有喜欢的帖子。
@@ -395,22 +448,46 @@ export default function MyPage() {
 
             {activeTab === 'settings' && (
               <section className="mt-4 rounded-sm border border-zinc-700 bg-black/80">
-                <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold text-white">好友申请</h2>
+                <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold text-white">
+                  好友申请
+                </h2>
                 <div className="grid gap-4 p-4 lg:grid-cols-2">
                   <div>
-                    <h3 className="text-xs font-semibold text-zinc-400">收到的申请</h3>
+                    <h3 className="text-xs font-semibold text-zinc-400">
+                      收到的申请
+                    </h3>
                     {incomingFriendRequests.length === 0 ? (
-                      <p className="py-5 text-sm text-zinc-500">暂无收到的好友申请。</p>
+                      <p className="py-5 text-sm text-zinc-500">
+                        暂无收到的好友申请。
+                      </p>
                     ) : (
                       <ul className="mt-3 space-y-3">
                         {incomingFriendRequests.map((request) => (
-                          <li key={request.id} className="flex items-center justify-between gap-3 border border-zinc-800 px-3 py-2">
-                            <span className="truncate text-sm text-zinc-200">{request.requester.nickname || request.requester.username}</span>
+                          <li
+                            key={request.id}
+                            className="flex items-center justify-between gap-3 border border-zinc-800 px-3 py-2"
+                          >
+                            <span className="truncate text-sm text-zinc-200">
+                              {request.requester.nickname ||
+                                request.requester.username}
+                            </span>
                             <div className="flex gap-2">
-                              <button className="border border-zinc-700 px-2 py-1 text-xs" type="button" onClick={() => void handleAcceptFriendRequest(request.id)}>
+                              <button
+                                className="border border-zinc-700 px-2 py-1 text-xs"
+                                type="button"
+                                onClick={() =>
+                                  void handleAcceptFriendRequest(request.id)
+                                }
+                              >
                                 接受
                               </button>
-                              <button className="border border-zinc-700 px-2 py-1 text-xs" type="button" onClick={() => void handleRejectFriendRequest(request.id)}>
+                              <button
+                                className="border border-zinc-700 px-2 py-1 text-xs"
+                                type="button"
+                                onClick={() =>
+                                  void handleRejectFriendRequest(request.id)
+                                }
+                              >
                                 拒绝
                               </button>
                             </div>
@@ -420,15 +497,31 @@ export default function MyPage() {
                     )}
                   </div>
                   <div>
-                    <h3 className="text-xs font-semibold text-zinc-400">发出的申请</h3>
+                    <h3 className="text-xs font-semibold text-zinc-400">
+                      发出的申请
+                    </h3>
                     {outgoingFriendRequests.length === 0 ? (
-                      <p className="py-5 text-sm text-zinc-500">暂无发出的好友申请。</p>
+                      <p className="py-5 text-sm text-zinc-500">
+                        暂无发出的好友申请。
+                      </p>
                     ) : (
                       <ul className="mt-3 space-y-3">
                         {outgoingFriendRequests.map((request) => (
-                          <li key={request.id} className="flex items-center justify-between gap-3 border border-zinc-800 px-3 py-2">
-                            <span className="truncate text-sm text-zinc-200">{request.recipient.nickname || request.recipient.username}</span>
-                            <button className="border border-zinc-700 px-2 py-1 text-xs" type="button" onClick={() => void handleCancelFriendRequest(request.id)}>
+                          <li
+                            key={request.id}
+                            className="flex items-center justify-between gap-3 border border-zinc-800 px-3 py-2"
+                          >
+                            <span className="truncate text-sm text-zinc-200">
+                              {request.recipient.nickname ||
+                                request.recipient.username}
+                            </span>
+                            <button
+                              className="border border-zinc-700 px-2 py-1 text-xs"
+                              type="button"
+                              onClick={() =>
+                                void handleCancelFriendRequest(request.id)
+                              }
+                            >
                               取消
                             </button>
                           </li>
@@ -443,19 +536,28 @@ export default function MyPage() {
 
           <aside className="flex min-w-0 flex-col gap-3">
             <section className="rounded-sm border border-zinc-700 bg-black/80">
-              <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold">个人资料</h2>
+              <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold">
+                个人资料
+              </h2>
               <dl className="space-y-3 px-4 py-4 text-xs">
                 {profileRows.map(([label, value]) => (
-                  <div key={label} className="grid grid-cols-[96px_minmax(0,1fr)] gap-3">
+                  <div
+                    key={label}
+                    className="grid grid-cols-[96px_minmax(0,1fr)] gap-3"
+                  >
                     <dt className="text-zinc-500">{label}</dt>
-                    <dd className="truncate text-right text-zinc-200">{value}</dd>
+                    <dd className="truncate text-right text-zinc-200">
+                      {value}
+                    </dd>
                   </div>
                 ))}
               </dl>
             </section>
 
             <section className="rounded-sm border border-zinc-700 bg-black/80">
-              <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold">徽章</h2>
+              <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold">
+                徽章
+              </h2>
               <div className="grid grid-cols-4 gap-3 px-4 py-4 text-center text-[11px] text-zinc-400">
                 {['第2年', '发布达人', '评论常客', '...'].map((badge) => (
                   <div key={badge} className="flex flex-col items-center gap-2">
@@ -469,13 +571,22 @@ export default function MyPage() {
             </section>
 
             <section className="rounded-sm border border-zinc-700 bg-black/80">
-              <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold">最近访客</h2>
+              <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold">
+                最近访客
+              </h2>
               <ul className="space-y-3 px-4 py-4 text-sm">
                 {visitors.map((visitor) => (
-                  <li key={visitor.name} className="grid grid-cols-[28px_minmax(0,1fr)_64px] items-center gap-3">
+                  <li
+                    key={visitor.name}
+                    className="grid grid-cols-[28px_minmax(0,1fr)_64px] items-center gap-3"
+                  >
                     <span className="h-6 w-6 rounded-full border border-zinc-600 bg-zinc-900" />
-                    <span className="truncate text-zinc-200">{visitor.name}</span>
-                    <span className="text-right text-xs text-zinc-500">{visitor.time}</span>
+                    <span className="truncate text-zinc-200">
+                      {visitor.name}
+                    </span>
+                    <span className="text-right text-xs text-zinc-500">
+                      {visitor.time}
+                    </span>
                   </li>
                 ))}
               </ul>

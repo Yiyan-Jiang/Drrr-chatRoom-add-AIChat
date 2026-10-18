@@ -1,1 +1,1 @@
-"""Socket transport and event implementations."""
+"""组织 Socket 通信和实时事件处理实现。"""

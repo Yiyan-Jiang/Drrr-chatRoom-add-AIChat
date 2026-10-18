@@ -1,1 +1,1 @@
-"""External service clients used by the business layer."""
+"""组织业务层使用的外部服务客户端。"""

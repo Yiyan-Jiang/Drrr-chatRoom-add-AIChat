@@ -1,3 +1,5 @@
+"""根据旧库结构生成和执行 MySQL 补迁移语句。"""
+
 from collections.abc import Iterable, Mapping
 
 from sqlalchemy import bindparam, text
@@ -9,6 +11,7 @@ TABLE_BY_LOWER_NAME = {table.lower(): table for table in TABLES}
 
 
 def _canonical_table_name(table_name: str) -> str | None:
+    """将已知业务表名转换为规范大小写，未知表返回 None。"""
     return TABLE_BY_LOWER_NAME.get(table_name.lower())
 
 
@@ -16,6 +19,7 @@ def normalize_schema_snapshot(
     columns: Mapping[str, Iterable[str]],
     indexes: Mapping[str, Iterable[str]],
 ) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
+    """将旧库列与索引快照归一为已知表名对应的集合。"""
     normalized_columns: dict[str, set[str]] = {table: set() for table in TABLES}
     normalized_indexes: dict[str, set[str]] = {table: set() for table in TABLES}
 
@@ -33,16 +37,19 @@ def normalize_schema_snapshot(
 
 
 def _table_columns(columns: Mapping[str, Iterable[str]], table: str) -> set[str]:
+    """从结构快照读取指定表的列集合，缺失表返回空集合。"""
     return set(columns.get(table, set()))
 
 
 def _table_indexes(indexes: Mapping[str, Iterable[str]], table: str) -> set[str]:
+    """从结构快照读取指定表的索引集合，缺失表返回空集合。"""
     return set(indexes.get(table, set()))
 
 
 def plan_room_display_metadata_migration(
     columns: Mapping[str, Iterable[str]],
 ) -> list[str]:
+    """根据缺失列规划房间展示字段及数据回填 SQL，不执行语句。"""
     room_columns = _table_columns(columns, "chatRoom_room")
     statements: list[str] = []
 
@@ -52,8 +59,7 @@ def plan_room_display_metadata_migration(
         "min_age": "ALTER TABLE chatRoom_room ADD COLUMN min_age INT NULL",
         "max_age": "ALTER TABLE chatRoom_room ADD COLUMN max_age INT NULL",
         "max_members": (
-            "ALTER TABLE chatRoom_room "
-            "ADD COLUMN max_members INT NOT NULL DEFAULT 20"
+            "ALTER TABLE chatRoom_room ADD COLUMN max_members INT NOT NULL DEFAULT 20"
         ),
     }
 
@@ -74,6 +80,7 @@ def plan_room_display_metadata_migration(
 def plan_room_intro_metadata_migration(
     columns: Mapping[str, Iterable[str]],
 ) -> list[str]:
+    """根据缺失列规划房间介绍字段及峰值人数回填 SQL，不执行语句。"""
     room_columns = _table_columns(columns, "chatRoom_room")
     statements: list[str] = []
 
@@ -106,6 +113,7 @@ def plan_chat_refactor_migration(
     indexes: Mapping[str, Iterable[str]],
     foreign_keys: Iterable[str],
 ) -> list[str]:
+    """根据结构快照规划聊天字段、数据回填、索引和外键 SQL。"""
     user_columns = _table_columns(columns, "chatRoom_user")
     room_columns = _table_columns(columns, "chatRoom_room")
     message_columns = _table_columns(columns, "chatRoom_message")
@@ -117,7 +125,9 @@ def plan_chat_refactor_migration(
     statements: list[str] = []
 
     if "avatar_key" not in user_columns:
-        statements.append("ALTER TABLE chatRoom_user ADD COLUMN avatar_key VARCHAR(32) NULL")
+        statements.append(
+            "ALTER TABLE chatRoom_user ADD COLUMN avatar_key VARCHAR(32) NULL"
+        )
         user_columns = user_columns | {"avatar_key"}
 
     if "owner_id" not in room_columns:
@@ -163,7 +173,10 @@ def plan_chat_refactor_migration(
             "WHERE r.owner_id IS NULL"
         )
 
-    if "avatar_key" in user_columns and "idx_chatRoom_user_avatar_key" not in user_indexes:
+    if (
+        "avatar_key" in user_columns
+        and "idx_chatRoom_user_avatar_key" not in user_indexes
+    ):
         statements.append(
             "CREATE INDEX idx_chatRoom_user_avatar_key ON chatRoom_user (avatar_key)"
         )
@@ -191,10 +204,7 @@ def plan_chat_refactor_migration(
             "ON chatRoom_message (client_message_id)"
         )
 
-    if (
-        "owner_id" in room_columns
-        and "fk_chatRoom_room_owner" not in foreign_key_names
-    ):
+    if "owner_id" in room_columns and "fk_chatRoom_room_owner" not in foreign_key_names:
         statements.append(
             "ALTER TABLE chatRoom_room "
             "ADD CONSTRAINT fk_chatRoom_room_owner "
@@ -205,7 +215,10 @@ def plan_chat_refactor_migration(
     return statements
 
 
-async def inspect_schema(conn: AsyncConnection) -> tuple[dict[str, set[str]], dict[str, set[str]], set[str]]:
+async def inspect_schema(
+    conn: AsyncConnection,
+) -> tuple[dict[str, set[str]], dict[str, set[str]], set[str]]:
+    """查询当前 MySQL 库的业务列、索引和外键名称并返回归一快照。"""
     raw_columns: dict[str, set[str]] = {}
     raw_indexes: dict[str, set[str]] = {}
 
@@ -247,6 +260,14 @@ async def inspect_schema(conn: AsyncConnection) -> tuple[dict[str, set[str]], di
 
 
 async def apply_pending_schema_migrations(conn: AsyncConnection) -> list[str]:
+    """检查旧版库结构并执行缺失字段与约束的补迁移。
+
+    Args:
+        conn: 调用方提供的 MySQL 异步连接；本函数不另建事务。
+
+    Returns:
+        按实际执行顺序排列的 SQL 语句。
+    """
     columns, indexes, foreign_keys = await inspect_schema(conn)
     statements = [
         *plan_room_display_metadata_migration(columns),

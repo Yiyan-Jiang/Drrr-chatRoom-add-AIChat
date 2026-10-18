@@ -1,3 +1,5 @@
+"""查询帖子展示数据并读写互动记录，不提交事务。"""
+
 from datetime import datetime
 
 from sqlalchemy import delete, func, select
@@ -18,31 +20,43 @@ from normal_system.schemas.user import UserPublic
 
 
 def _preview(content: str, limit: int = 180) -> str:
+    """按字符数截取帖子正文预览。"""
     return content[:limit]
 
 
 def _author_public(user: User | None) -> UserPublic | None:
+    """将可选用户模型转换为公开资料，缺失作者时返回 None。"""
     return UserPublic.model_validate(user) if user else None
 
 
 async def _post_counts(db: AsyncSession, post_id: int) -> tuple[int, int, int]:
+    """分别查询帖子的评论数、点赞数和收藏数。"""
     comments = await db.scalar(
-        select(func.count()).select_from(PostComment).where(PostComment.post_id == post_id)
+        select(func.count())
+        .select_from(PostComment)
+        .where(PostComment.post_id == post_id)
     )
     likes = await db.scalar(
         select(func.count()).select_from(PostLike).where(PostLike.post_id == post_id)
     )
     favorites = await db.scalar(
-        select(func.count()).select_from(PostFavorite).where(PostFavorite.post_id == post_id)
+        select(func.count())
+        .select_from(PostFavorite)
+        .where(PostFavorite.post_id == post_id)
     )
     return int(comments or 0), int(likes or 0), int(favorites or 0)
 
 
-async def _viewer_flags(db: AsyncSession, post_id: int, viewer_id: int | None) -> tuple[bool, bool]:
+async def _viewer_flags(
+    db: AsyncSession, post_id: int, viewer_id: int | None
+) -> tuple[bool, bool]:
+    """查询浏览者是否已点赞或收藏；匿名浏览者均返回 False。"""
     if viewer_id is None:
         return False, False
     liked = await db.scalar(
-        select(PostLike.id).where(PostLike.post_id == post_id, PostLike.user_id == viewer_id)
+        select(PostLike.id).where(
+            PostLike.post_id == post_id, PostLike.user_id == viewer_id
+        )
     )
     favorited = await db.scalar(
         select(PostFavorite.id).where(
@@ -59,6 +73,7 @@ async def list_post_comments(
     limit: int = 30,
     cursor: int | None = None,
 ) -> PaginatedCommentsResponse:
+    """按评论 ID 倒序返回帖子评论页和后续游标。"""
     safe_limit = max(1, min(limit, 50))
     filters = [PostComment.post_id == post_id]
     if cursor is not None:
@@ -90,7 +105,10 @@ async def list_post_comments(
     )
 
 
-async def _to_list_item(db: AsyncSession, post: Post, author: User | None, viewer_id: int | None) -> PostListItem:
+async def _to_list_item(
+    db: AsyncSession, post: Post, author: User | None, viewer_id: int | None
+) -> PostListItem:
+    """组合帖子预览、作者资料、互动计数和浏览者点赞状态。"""
     comments, likes, favorites = await _post_counts(db, post.id)
     liked, _favorited = await _viewer_flags(db, post.id, viewer_id)
     return PostListItem(
@@ -113,6 +131,7 @@ async def list_posts(
     limit: int = 20,
     cursor: int | None = None,
 ) -> PaginatedPostsResponse:
+    """按帖子 ID 倒序读取已发布帖子页。"""
     safe_limit = max(1, min(limit, 50))
     filters = [Post.status == "published"]
     if cursor is not None:
@@ -127,8 +146,7 @@ async def list_posts(
     rows = result.all()
     page_rows = rows[:safe_limit]
     items = [
-        await _to_list_item(db, post, author, viewer_id)
-        for post, author in page_rows
+        await _to_list_item(db, post, author, viewer_id) for post, author in page_rows
     ]
     return PaginatedPostsResponse(
         items=items,
@@ -142,6 +160,7 @@ async def get_post_detail(
     post_id: int,
     viewer_id: int | None,
 ) -> PostDetail | None:
+    """读取已发布帖子的正文与互动状态，不存在时返回 None。"""
     result = await db.execute(
         select(Post, User)
         .outerjoin(User, Post.author_id == User.id)
@@ -175,6 +194,7 @@ async def list_my_favorite_posts(
     limit: int = 20,
     cursor: int | None = None,
 ) -> PaginatedPostsResponse:
+    """读取用户收藏的已发布帖子，按收藏时间倒序排列。"""
     safe_limit = max(1, min(limit, 50))
     filters = [PostFavorite.user_id == user_id, Post.status == "published"]
     if cursor is not None:
@@ -190,8 +210,7 @@ async def list_my_favorite_posts(
     rows = result.all()
     page_rows = rows[:safe_limit]
     items = [
-        await _to_list_item(db, post, author, user_id)
-        for post, author in page_rows
+        await _to_list_item(db, post, author, user_id) for post, author in page_rows
     ]
     return PaginatedPostsResponse(
         items=items,
@@ -206,6 +225,7 @@ async def list_my_posts(
     limit: int = 20,
     cursor: int | None = None,
 ) -> PaginatedPostsResponse:
+    """按帖子 ID 倒序读取用户发布的帖子。"""
     safe_limit = max(1, min(limit, 50))
     filters = [Post.author_id == user_id, Post.status == "published"]
     if cursor is not None:
@@ -220,8 +240,7 @@ async def list_my_posts(
     rows = result.all()
     page_rows = rows[:safe_limit]
     items = [
-        await _to_list_item(db, post, author, user_id)
-        for post, author in page_rows
+        await _to_list_item(db, post, author, user_id) for post, author in page_rows
     ]
     return PaginatedPostsResponse(
         items=items,
@@ -236,6 +255,7 @@ async def list_my_liked_posts(
     limit: int = 20,
     cursor: int | None = None,
 ) -> PaginatedPostsResponse:
+    """读取用户点赞的已发布帖子，按点赞时间倒序排列。"""
     safe_limit = max(1, min(limit, 50))
     filters = [PostLike.user_id == user_id, Post.status == "published"]
     if cursor is not None:
@@ -251,8 +271,7 @@ async def list_my_liked_posts(
     rows = result.all()
     page_rows = rows[:safe_limit]
     items = [
-        await _to_list_item(db, post, author, user_id)
-        for post, author in page_rows
+        await _to_list_item(db, post, author, user_id) for post, author in page_rows
     ]
     return PaginatedPostsResponse(
         items=items,
@@ -267,6 +286,7 @@ async def list_my_post_comments(
     limit: int = 20,
     cursor: int | None = None,
 ) -> PaginatedMyCommentsResponse:
+    """按评论 ID 倒序读取用户评论及所属帖子预览。"""
     safe_limit = max(1, min(limit, 50))
     filters = [PostComment.author_id == user_id, Post.status == "published"]
     if cursor is not None:
@@ -302,40 +322,61 @@ async def list_my_post_comments(
 
 
 async def get_post_by_id(db: AsyncSession, post_id: int) -> Post | None:
+    """按主键读取帖子模型，不存在时返回 None。"""
     return await db.get(Post, post_id)
 
 
-async def get_post_comment_by_id(db: AsyncSession, comment_id: int) -> PostComment | None:
+async def get_post_comment_by_id(
+    db: AsyncSession, comment_id: int
+) -> PostComment | None:
+    """按主键读取评论模型，不存在时返回 None。"""
     return await db.get(PostComment, comment_id)
 
 
 def add_post(db: AsyncSession, **fields) -> Post:
+    """把帖子加入会话，不提交事务。"""
     post = Post(**fields)
     db.add(post)
     return post
 
 
 def add_comment(db: AsyncSession, **fields) -> PostComment:
+    """把帖子评论加入会话，不提交事务。"""
     comment = PostComment(**fields)
     db.add(comment)
     return comment
 
 
 async def remove_post(db: AsyncSession, post: Post) -> None:
+    """在会话中标记删除帖子，不提交事务。"""
     await db.delete(post)
 
 
 async def remove_post_comment(db: AsyncSession, comment: PostComment) -> None:
+    """在会话中标记删除评论，不提交事务。"""
     await db.delete(comment)
 
 
-async def get_post_reaction_id(db: AsyncSession, model, post_id: int, user_id: int) -> int | None:
-    return await db.scalar(select(model.id).where(model.post_id == post_id, model.user_id == user_id))
+async def get_post_reaction_id(
+    db: AsyncSession, model, post_id: int, user_id: int
+) -> int | None:
+    """按互动模型、帖子及用户读取已有记录 ID，不存在时返回 None。"""
+    return await db.scalar(
+        select(model.id).where(model.post_id == post_id, model.user_id == user_id)
+    )
 
 
-def add_post_reaction(db: AsyncSession, model, post_id: int, user_id: int, *, created_at: datetime) -> None:
+def add_post_reaction(
+    db: AsyncSession, model, post_id: int, user_id: int, *, created_at: datetime
+) -> None:
+    """把指定类型的帖子互动加入会话，不提交事务。"""
     db.add(model(post_id=post_id, user_id=user_id, created_at=created_at))
 
 
-async def remove_post_reaction(db: AsyncSession, model, post_id: int, user_id: int) -> None:
-    await db.execute(delete(model).where(model.post_id == post_id, model.user_id == user_id))
+async def remove_post_reaction(
+    db: AsyncSession, model, post_id: int, user_id: int
+) -> None:
+    """删除用户对帖子的指定类型互动，不提交事务。"""
+    await db.execute(
+        delete(model).where(model.post_id == post_id, model.user_id == user_id)
+    )

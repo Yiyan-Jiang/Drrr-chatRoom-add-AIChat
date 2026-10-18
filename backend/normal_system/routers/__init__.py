@@ -1,3 +1,5 @@
+"""导出应用装配所需的业务路由和 Socket.IO 实例。"""
+
 from normal_system.routers.user import router as user_router
 from normal_system.routers.auth import router as auth_router
 from normal_system.routers.room import router as room_router

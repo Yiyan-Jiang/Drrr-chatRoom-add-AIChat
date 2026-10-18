@@ -1,3 +1,4 @@
+/** 账号登录页面。 */
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -9,6 +10,7 @@ import ShowUser from '@/components/ShowUser'
 import AuthBrand from '@/components/auth/AuthBrand'
 import LoginForm from '@/components/auth/LoginForm'
 
+/** 管理登录输入与提交状态，登录成功后更新认证状态并进入 /home。 */
 export default function Login() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -68,7 +70,11 @@ export default function Login() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#090909] px-4">
       <div className="mb-10">
-        <AuthBrand logoSizeClassName="h-110 w-110" title="Weclome... !" showBanner={false} />
+        <AuthBrand
+          logoSizeClassName="h-110 w-110"
+          title="Weclome... !"
+          showBanner={false}
+        />
       </div>
 
       <LoginForm
@@ -85,7 +91,10 @@ export default function Login() {
 
       <div className="text-center text-sm text-gray-400">
         <span>还没有账号？</span>
-        <Link to="/register" className="ml-1 font-medium hover:text-white hover:underline">
+        <Link
+          to="/register"
+          className="ml-1 font-medium hover:text-white hover:underline"
+        >
           Register Now
         </Link>
       </div>

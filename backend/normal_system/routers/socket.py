@@ -1,8 +1,12 @@
-"""Register the application's Socket.IO events once on the shared server."""
+"""在共用 Socket.IO 服务上集中注册连接、群聊和私聊事件。"""
 
 from normal_system.realtime.connection import connect, disconnect
 from normal_system.realtime.room_chat import join_room, leave_room, send_message
-from normal_system.realtime.private_chat import join_private_chat, leave_private_chat, send_private_message
+from normal_system.realtime.private_chat import (
+    join_private_chat,
+    leave_private_chat,
+    send_private_message,
+)
 from normal_system.realtime.server import sio
 
 sio.on("connect", handler=connect)

@@ -1,3 +1,4 @@
+/** 按路由房间 ID 连接普通聊天状态，组合消息区、发送区与房间资料入口。 */
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -9,6 +10,7 @@ import ChatRoomHeader from '@/components/chat/ChatRoomHeader'
 import RoomInfoDrawer from '@/components/chat/RoomInfoDrawer'
 import PageState from '@/components/common/PageState'
 
+/** 按路由房间 ID 连接普通聊天状态，组合消息区、发送区与房间资料入口。 */
 export default function ChatRoom() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
@@ -16,24 +18,27 @@ export default function ChatRoom() {
   const [roomInfoOpen, setRoomInfoOpen] = useState(false)
   const roomIdNum = useMemo(() => Number.parseInt(roomId || '0', 10), [roomId])
 
-  const { containerRef, handleScroll, isNearHead, scrollToHead } = useChatScroll()
+  const { containerRef, handleScroll, isNearHead, scrollToHead } =
+    useChatScroll()
   const chat = useRoomChat(roomIdNum, user, isNearHead, scrollToHead)
   const { refreshRoom } = chat
 
   const openRoomInfo = useCallback(() => {
-    refreshRoom().then(() => {
-      setRoomInfoOpen(true)
-    }).catch((error) => {
-      if (error?.kind === 'not_found') {
-        setRoomInfoOpen(false)
-        toast.error('房间不存在或已被删除')
-        navigate('/home/rooms')
-        return
-      }
-      if (error?.kind !== 'forbidden') {
-        toast.error(error?.message || '刷新房间信息失败')
-      }
-    })
+    refreshRoom()
+      .then(() => {
+        setRoomInfoOpen(true)
+      })
+      .catch((error) => {
+        if (error?.kind === 'not_found') {
+          setRoomInfoOpen(false)
+          toast.error('房间不存在或已被删除')
+          navigate('/home/rooms')
+          return
+        }
+        if (error?.kind !== 'forbidden') {
+          toast.error(error?.message || '刷新房间信息失败')
+        }
+      })
   }, [navigate, refreshRoom])
 
   if (!roomIdNum || Number.isNaN(roomIdNum)) {

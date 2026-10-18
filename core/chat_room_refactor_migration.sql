@@ -1,9 +1,9 @@
--- Chat room refactor migration notes.
--- Apply in phases for existing databases. Review owner backfill before production use.
+-- 聊天室结构调整迁移说明。
+-- 已有数据库需分阶段应用；生产使用前须核对房主回填结果。
 
 USE chat_rooms;
 
--- Phase 1: add nullable/compatible columns.
+-- 阶段 1：添加可空或兼容现有数据的字段。
 ALTER TABLE chatRoom_user
   ADD COLUMN avatar_key VARCHAR(32) NULL;
 
@@ -14,7 +14,7 @@ ALTER TABLE chatRoom_message
   ADD COLUMN message_type VARCHAR(20) NULL,
   ADD COLUMN client_message_id VARCHAR(64) NULL;
 
--- Phase 2: backfill existing rows.
+-- 阶段 2：回填已有记录。
 UPDATE chatRoom_user
 SET avatar_key = 'kanra'
 WHERE avatar_key IS NULL;
@@ -23,7 +23,7 @@ UPDATE chatRoom_message
 SET message_type = 'user'
 WHERE message_type IS NULL;
 
--- Owner backfill: choose the earliest message sender as room owner when possible.
+-- 房主回填：存在历史消息时，选择最早消息的发送者作为房主。
 UPDATE chatRoom_room r
 JOIN (
   SELECT room_id, user_id
@@ -39,10 +39,10 @@ JOIN (
 SET r.owner_id = first_message.user_id
 WHERE r.owner_id IS NULL;
 
--- Rooms without messages need manual owner assignment before Phase 3:
+-- 没有消息的房间需在阶段 3 前手工指定房主：
 -- UPDATE chatRoom_room SET owner_id = <admin_user_id> WHERE owner_id IS NULL;
 
--- Phase 3: enforce constraints after verifying no nulls remain.
+-- 阶段 3：确认没有空值后再启用约束。
 -- SELECT COUNT(*) FROM chatRoom_user WHERE avatar_key IS NULL;
 -- SELECT COUNT(*) FROM chatRoom_room WHERE owner_id IS NULL;
 -- SELECT COUNT(*) FROM chatRoom_message WHERE message_type IS NULL;
@@ -53,7 +53,7 @@ ALTER TABLE chatRoom_user
 ALTER TABLE chatRoom_message
   MODIFY message_type VARCHAR(20) NOT NULL DEFAULT 'user';
 
--- Run this only after owner_id has no nulls.
+-- 仅在 owner_id 没有空值后执行以下语句。
 -- ALTER TABLE chatRoom_room
 --   MODIFY owner_id INT NOT NULL;
 

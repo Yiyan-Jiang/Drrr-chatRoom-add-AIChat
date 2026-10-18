@@ -1,18 +1,37 @@
+/** 管理帖子详情、首批评论、点赞、收藏与评论提交状态。 */
 import { useCallback, useEffect, useState } from 'react'
 import { postsApi, type PostComment, type PostDetail } from '@/api'
 
+/** 异步内容加载的阶段状态。 */
 type LoadState = 'idle' | 'loading' | 'success' | 'error'
 
+/**
+ * 将 404 转换为帖子不存在提示，其余错误使用加载失败提示。
+ * @param error - 帖子或评论加载请求的错误值。
+ * @returns 帖子详情页使用的错误提示。
+ */
 function getDetailErrorMessage(error: unknown): string {
-  const status = typeof error === 'object' && error !== null && 'response' in error
-    ? (error as { response?: { status?: number } }).response?.status
-    : undefined
+  const status =
+    typeof error === 'object' && error !== null && 'response' in error
+      ? (
+          error as {
+            /** 详情加载错误中可读取的 HTTP 响应。 */ response?: {
+              /** 用于识别帖子不存在错误的 HTTP 状态码。 */ status?: number
+            }
+          }
+        ).response?.status
+      : undefined
   if (status === 404) {
     return '帖子不存在或已被删除。'
   }
   return '暂时无法加载帖子，请稍后重试。'
 }
 
+/**
+ * 载入帖子与前 50 条评论，并管理点赞、收藏和评论提交。
+ * @param postId - 帖子编号；为空或 0 时写入无效编号提示。
+ * @returns 帖子、评论、表单、错误状态和相关操作；点赞或收藏失败时回滚本地修改。
+ */
 export function usePostDetail(postId: number | null) {
   const [post, setPost] = useState<PostDetail | null>(null)
   const [comments, setComments] = useState<PostComment[]>([])
@@ -21,6 +40,7 @@ export function usePostDetail(postId: number | null) {
   const [isMutating, setIsMutating] = useState(false)
   const [commentDraft, setCommentDraft] = useState('')
 
+  /** 并行刷新帖子详情和前 50 条评论，并更新加载状态。 */
   const loadPost = useCallback(async () => {
     if (!postId) {
       setLoadState('error')
@@ -44,6 +64,7 @@ export function usePostDetail(postId: number | null) {
     }
   }, [postId])
 
+  /** 乐观切换当前帖子的点赞状态；失败时回滚并写入错误提示。 */
   const toggleLike = useCallback(async () => {
     if (!post || isMutating) {
       return
@@ -56,7 +77,9 @@ export function usePostDetail(postId: number | null) {
     })
     setIsMutating(true)
     try {
-      const next = post.liked_by_me ? await postsApi.unlike(post.id) : await postsApi.like(post.id)
+      const next = post.liked_by_me
+        ? await postsApi.unlike(post.id)
+        : await postsApi.like(post.id)
       setPost(next)
     } catch {
       setPost(previous)
@@ -66,6 +89,7 @@ export function usePostDetail(postId: number | null) {
     }
   }, [isMutating, post])
 
+  /** 乐观切换当前帖子的收藏状态；失败时回滚并写入错误提示。 */
   const toggleFavorite = useCallback(async () => {
     if (!post || isMutating) {
       return
@@ -90,6 +114,7 @@ export function usePostDetail(postId: number | null) {
     }
   }, [isMutating, post])
 
+  /** 提交去除首尾空白的评论，成功后更新评论列表并清空草稿。 */
   const submitComment = useCallback(async () => {
     if (!post || !commentDraft.trim()) {
       return
@@ -99,9 +124,11 @@ export function usePostDetail(postId: number | null) {
     try {
       const comment = await postsApi.createComment(post.id, { content })
       setComments((current) => [comment, ...current])
-      setPost((current) => current
-        ? { ...current, comments_count: current.comments_count + 1 }
-        : current)
+      setPost((current) =>
+        current
+          ? { ...current, comments_count: current.comments_count + 1 }
+          : current,
+      )
       setCommentDraft('')
     } catch {
       setErrorMessage('评论失败，请稍后重试。')

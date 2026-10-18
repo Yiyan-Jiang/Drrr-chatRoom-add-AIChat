@@ -1,3 +1,5 @@
+"""集中导出聊天室业务使用的数据库模型。"""
+
 from normal_system.models.message import Message
 from normal_system.models.post import Post, PostComment, PostFavorite, PostLike
 from normal_system.models.room import Room

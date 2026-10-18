@@ -1,3 +1,5 @@
+"""提供群聊消息写入、历史查询和删除的 HTTP 入口。"""
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
@@ -19,8 +21,9 @@ router = APIRouter(prefix="/messages", tags=["messages"])
 async def create_new_message(
     message: MessageCreate,
     user_id: int = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
+    """以登录用户身份提交群聊消息，并返回已存储的消息。"""
     try:
         db_message = await create_message(db, message, user_id)
         return serialize_message(db_message)
@@ -35,6 +38,7 @@ async def get_messages_in_room(
     limit: int = Query(10, ge=1, le=30),
     before_id: int | None = Query(default=None, ge=1),
 ):
+    """按消息 ID 游标返回房间的一页消息列表。"""
     items, _has_more, _next_before_id = await get_messages_page_by_room(
         db, room_id, limit=limit, before_id=before_id
     )
@@ -48,6 +52,7 @@ async def get_messages_page(
     limit: int = Query(10, ge=1, le=30),
     before_id: int | None = Query(default=None, ge=1),
 ):
+    """返回群聊消息页及是否还有历史、后续游标。"""
     items, has_more, next_before_id = await get_messages_page_by_room(
         db, room_id, limit=limit, before_id=before_id
     )
@@ -60,6 +65,7 @@ async def get_messages_page(
 
 @router.get("/{message_id}", response_model=MessageInDB)
 async def get_single_message(message_id: int, db: AsyncSession = Depends(get_db)):
+    """按 ID 返回单条群聊消息，不存在时返回 HTTP 404。"""
     message = await get_message_by_id(db, message_id)
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
@@ -68,6 +74,7 @@ async def get_single_message(message_id: int, db: AsyncSession = Depends(get_db)
 
 @router.delete("/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_existing_message(message_id: int, db: AsyncSession = Depends(get_db)):
+    """删除指定群聊消息，不存在时返回 HTTP 404。"""
     success = await delete_message(db, message_id)
     if not success:
         raise HTTPException(status_code=404, detail="Message not found")

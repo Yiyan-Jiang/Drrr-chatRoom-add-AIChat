@@ -1,5 +1,5 @@
 /**
- * @parm 组件用途：展示主布局顶部品牌、导航和在线人数。
+ * 主布局顶部品牌、导航和注册用户数量。
  */
 import { NavLink } from 'react-router-dom'
 import logoUrl from '@/assets/icon/Logo/logo.png'
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { path: '/help', label: '帮助' },
 ]
 
+/** 展示品牌、主导航和注册用户数量。 */
 export default function AppHeader() {
   const { data } = useUserCount()
 
@@ -40,7 +41,10 @@ export default function AppHeader() {
                 .padStart(4, '0')
                 .split('')
                 .map((num, index) => (
-                  <span key={index} className="border border-y-2 border-[#666] p-0.5">
+                  <span
+                    key={index}
+                    className="border border-y-2 border-[#666] p-0.5"
+                  >
                     {num}
                   </span>
                 ))}
@@ -53,7 +57,9 @@ export default function AppHeader() {
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) =>
-                  isActive ? 'font-bold text-white underline' : 'transition-colors hover:text-gray-300'
+                  isActive
+                    ? 'font-bold text-white underline'
+                    : 'transition-colors hover:text-gray-300'
                 }
               >
                 {item.label}

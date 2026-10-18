@@ -1,3 +1,4 @@
+/** 展示头像和可展开的用户资料，按好友关系提供申请、接受申请或私聊入口。 */
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -9,24 +10,42 @@ import type { User } from '@/types/user'
 import { getUserDisplayName } from '@/utils/userDisplayName'
 import { logger } from '@/utils/logger'
 
+/** 资料卡使用的本人、好友和申请关系状态。 */
 type FriendRelation = 'self' | 'friend' | 'outgoing' | 'incoming' | 'none'
 
+/** 用户资料卡的目标与显示配置。 */
 interface UserHoverCardProps {
+  /** 目标用户，为 null 时展示资料不可用提示。 */
   user: User | null
+  /** 展开资料卡相对头像的对齐方向，默认 left。 */
   align?: 'left' | 'right'
+  /** 头像按钮的尺寸与样式类。 */
   avatarClassName?: string
+  /** 头像下方名称的尺寸与样式类。 */
   nameClassName?: string
+  /** 是否在头像下方展示名称，默认展示。 */
   showName?: boolean
 }
 
-function findRequest(requests: FriendRequest[], userId: number, currentUserId: number, incoming: boolean) {
+/** 按申请方向查找当前用户与目标用户之间的待处理好友申请。 */
+function findRequest(
+  requests: FriendRequest[],
+  userId: number,
+  currentUserId: number,
+  incoming: boolean,
+) {
   return requests.find((request) =>
     incoming
-      ? request.requester.id === userId && request.recipient.id === currentUserId && request.status === 'pending'
-      : request.requester.id === currentUserId && request.recipient.id === userId && request.status === 'pending',
+      ? request.requester.id === userId &&
+        request.recipient.id === currentUserId &&
+        request.status === 'pending'
+      : request.requester.id === currentUserId &&
+        request.recipient.id === userId &&
+        request.status === 'pending',
   )
 }
 
+/** 展示头像和可展开的用户资料，按好友关系提供申请、接受申请或私聊入口。 */
 export default function UserHoverCard({
   user,
   align = 'left',
@@ -38,10 +57,15 @@ export default function UserHoverCard({
   const { user: currentUser } = useAuth()
   const [open, setOpen] = useState(false)
   const [relation, setRelation] = useState<FriendRelation>('none')
-  const [incomingRequest, setIncomingRequest] = useState<FriendRequest | null>(null)
+  const [incomingRequest, setIncomingRequest] = useState<FriendRequest | null>(
+    null,
+  )
   const [busy, setBusy] = useState(false)
   const assets = resolveChatAvatarAssets(user?.avatar_key)
-  const displayName = getUserDisplayName(user, user?.id ? `用户${user.id}` : '系统')
+  const displayName = getUserDisplayName(
+    user,
+    user?.id ? `用户${user.id}` : '系统',
+  )
   const isSelf = !!user && !!currentUser && user.id === currentUser.id
 
   useEffect(() => {
@@ -65,7 +89,12 @@ export default function UserHoverCard({
           setIncomingRequest(null)
           return
         }
-        const incomingPending = findRequest(incoming.items, targetUser.id, viewer.id, true)
+        const incomingPending = findRequest(
+          incoming.items,
+          targetUser.id,
+          viewer.id,
+          true,
+        )
         if (incomingPending) {
           setRelation('incoming')
           setIncomingRequest(incomingPending)
@@ -100,7 +129,15 @@ export default function UserHoverCard({
   }, [isSelf, relation, user])
 
   const handleAction = async () => {
-    if (!user || !currentUser || isSelf || relation === 'self' || relation === 'outgoing' || busy) return
+    if (
+      !user ||
+      !currentUser ||
+      isSelf ||
+      relation === 'self' ||
+      relation === 'outgoing' ||
+      busy
+    )
+      return
     if (relation === 'friend') {
       navigate(`/private-chat/${user.id}`)
       return
@@ -139,9 +176,18 @@ export default function UserHoverCard({
         aria-label="查看用户资料"
         aria-expanded={open}
       >
-        <img src={assets.avatar} alt="" className="h-full w-full object-cover" loading="lazy" />
+        <img
+          src={assets.avatar}
+          alt=""
+          className="h-full w-full object-cover"
+          loading="lazy"
+        />
       </button>
-      {showName ? <div className={`${nameClassName} truncate text-center text-xs`}>{displayName}</div> : null}
+      {showName ? (
+        <div className={`${nameClassName} truncate text-center text-xs`}>
+          {displayName}
+        </div>
+      ) : null}
 
       {open && (
         <div
@@ -158,16 +204,32 @@ export default function UserHoverCard({
           {user ? (
             <>
               <div className="flex items-start gap-3">
-                <img src={assets.avatar} alt="" className="h-14 w-14 shrink-0 rounded object-cover" loading="lazy" />
+                <img
+                  src={assets.avatar}
+                  alt=""
+                  className="h-14 w-14 shrink-0 rounded object-cover"
+                  loading="lazy"
+                />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-semibold text-zinc-100">{user.username}</div>
-                  <div className="mt-0.5 truncate text-xs text-zinc-400">{user.nickname?.trim() || '暂无昵称'}</div>
-                  <div className="mt-3 text-xs leading-relaxed text-zinc-300">{user.bio?.trim() || '暂无简介'}</div>
+                  <div className="truncate text-sm font-semibold text-zinc-100">
+                    {user.username}
+                  </div>
+                  <div className="mt-0.5 truncate text-xs text-zinc-400">
+                    {user.nickname?.trim() || '暂无昵称'}
+                  </div>
+                  <div className="mt-3 text-xs leading-relaxed text-zinc-300">
+                    {user.bio?.trim() || '暂无简介'}
+                  </div>
                 </div>
               </div>
               <button
                 type="button"
-                disabled={busy || isSelf || relation === 'self' || relation === 'outgoing'}
+                disabled={
+                  busy ||
+                  isSelf ||
+                  relation === 'self' ||
+                  relation === 'outgoing'
+                }
                 onClick={handleAction}
                 className="mt-4 h-8 w-full rounded border border-zinc-700 text-xs text-zinc-100 transition hover:border-cyan-400 disabled:cursor-not-allowed disabled:text-zinc-500"
               >

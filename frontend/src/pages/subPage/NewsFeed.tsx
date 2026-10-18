@@ -1,3 +1,4 @@
+/** 加载静态新闻文档，按搜索词和分类筛选并分页展示。 */
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -9,6 +10,7 @@ import type { NewsDocument } from '@/features/news/newsTypes'
 
 const PAGE_SIZE = 10
 
+/** 格式化新闻日期，日期为空时展示未设置提示。 */
 function formatDate(value: string): string {
   if (!value) {
     return '未设置日期'
@@ -21,9 +23,12 @@ function formatDate(value: string): string {
   }).format(new Date(value))
 }
 
+/** 加载静态新闻文档，按搜索词和分类筛选并分页展示。 */
 export default function NewsFeed() {
   const [documents, setDocuments] = useState<NewsDocument[]>([])
-  const [loadState, setLoadState] = useState<'loading' | 'success' | 'error'>('loading')
+  const [loadState, setLoadState] = useState<'loading' | 'success' | 'error'>(
+    'loading',
+  )
   const [query, setQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [requestedPage, setCurrentPage] = useState(1)
@@ -32,10 +37,16 @@ export default function NewsFeed() {
     query,
     category: selectedCategory,
   })
-  const totalPages = Math.max(1, Math.ceil(filteredDocuments.length / PAGE_SIZE))
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredDocuments.length / PAGE_SIZE),
+  )
   const currentPage = Math.min(requestedPage, totalPages)
   const pageStart = (currentPage - 1) * PAGE_SIZE
-  const paginatedDocuments = filteredDocuments.slice(pageStart, pageStart + PAGE_SIZE)
+  const paginatedDocuments = filteredDocuments.slice(
+    pageStart,
+    pageStart + PAGE_SIZE,
+  )
 
   useEffect(() => {
     let isCurrent = true
@@ -207,7 +218,9 @@ export default function NewsFeed() {
                 <button
                   className="rounded border border-zinc-800 px-3 py-1.5 text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-zinc-800 disabled:hover:text-zinc-300"
                   disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  onClick={() =>
+                    setCurrentPage(Math.min(totalPages, currentPage + 1))
+                  }
                   type="button"
                 >
                   下一页

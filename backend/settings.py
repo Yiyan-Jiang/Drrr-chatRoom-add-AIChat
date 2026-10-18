@@ -1,3 +1,5 @@
+"""加载后端环境文件并定义 HTTP 应用配置。"""
+
 from pathlib import Path
 
 from dotenv import load_dotenv

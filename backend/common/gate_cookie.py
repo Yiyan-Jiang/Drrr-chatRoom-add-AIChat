@@ -1,3 +1,5 @@
+"""签发和验证带过期时间的门禁 Cookie。"""
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -9,7 +11,10 @@ GATE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7
 
 
 def get_gate_cookie_secret() -> str:
-    secret = os.environ.get("CHAT_GATE_COOKIE_SECRET") or os.environ.get("CHAT_JWT_SECRET")
+    """读取门禁签名密钥，未单独配置时使用访问令牌密钥。"""
+    secret = os.environ.get("CHAT_GATE_COOKIE_SECRET") or os.environ.get(
+        "CHAT_JWT_SECRET"
+    )
     if not secret:
         raise RuntimeError(
             "CHAT_GATE_COOKIE_SECRET or CHAT_JWT_SECRET is not set. Put it in backend/.env or your shell environment."
@@ -22,6 +27,15 @@ def create_gate_cookie_value(
     secret: str | None = None,
     now: datetime | None = None,
 ) -> str:
+    """签发七天有效、带有门禁通过标记的 Cookie 值。
+
+    Args:
+        secret: 显式签名密钥；未提供时读取后端环境配置。
+        now: 签发时间；未提供时使用当前 UTC 时间。
+
+    Returns:
+        使用 HS256 签名的门禁 JWT 字符串。
+    """
     actual_secret = secret or get_gate_cookie_secret()
     actual_now = now or datetime.now(timezone.utc)
     token = jwt.encode(
@@ -39,6 +53,7 @@ def create_gate_cookie_value(
         token = token.decode("utf-8")
     return token
 
+
 # 校验 cookie 是否被篡改
 def is_gate_cookie_valid(
     cookie_value: str | None,
@@ -46,6 +61,16 @@ def is_gate_cookie_valid(
     secret: str | None = None,
     now: datetime | None = None,
 ) -> bool:
+    """校验门禁 Cookie 的签名、必需声明和过期时间。
+
+    Args:
+        cookie_value: 请求携带的 Cookie，缺失时验证失败。
+        secret: 显式校验密钥；未提供时读取后端环境配置。
+        now: 用于过期比较的时间；未提供时使用当前 UTC 时间。
+
+    Returns:
+        Cookie 包含正确门禁标记且未过期时为 True。
+    """
     if not cookie_value:
         return False
 

@@ -1,3 +1,5 @@
+/** 展示邮箱页面的占位标题。 */
+/** 展示邮箱页面的占位标题。 */
 export default function MailboxPage() {
   return (
     <div className="flex items-center justify-center h-96">

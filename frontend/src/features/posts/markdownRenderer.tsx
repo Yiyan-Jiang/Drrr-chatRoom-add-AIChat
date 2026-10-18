@@ -1,10 +1,14 @@
+/** 为帖子正文配置 Markdown 渲染插件与组件。 */
 import { MarkdownHooks } from 'react-markdown'
 import rehypePrettyCode from 'rehype-pretty-code'
 import remarkGfm from 'remark-gfm'
 import type { Components } from 'react-markdown'
 
+/** 帖子 Markdown 渲染器的正文和预览模式配置。 */
 type PostsMarkdownRendererProps = {
+  /** 待渲染的 Markdown 源文本。 */
   markdown: string
+  /** 是否使用隐藏图片的摘要预览模式。 */
   preview?: boolean
 }
 
@@ -15,6 +19,11 @@ const prettyCodeOptions = {
 
 const SAFE_URL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:'])
 
+/**
+ * 允许页内锚点、相对地址以及 http、https 和 mailto 链接，其余地址返回 undefined。
+ * @param url - 帖子 Markdown 提供的链接或图片地址。
+ * @returns 去除首尾空白的可用地址，或 undefined。
+ */
 function sanitizeUrl(url: string | undefined): string | undefined {
   if (!url) {
     return undefined
@@ -22,10 +31,10 @@ function sanitizeUrl(url: string | undefined): string | undefined {
 
   const trimmed = url.trim()
   if (
-    trimmed.startsWith('#')
-    || trimmed.startsWith('/')
-    || trimmed.startsWith('./')
-    || trimmed.startsWith('../')
+    trimmed.startsWith('#') ||
+    trimmed.startsWith('/') ||
+    trimmed.startsWith('./') ||
+    trimmed.startsWith('../')
   ) {
     return trimmed
   }
@@ -36,12 +45,17 @@ function sanitizeUrl(url: string | undefined): string | undefined {
       return trimmed
     }
   } catch {
-    // Unsafe or malformed URLs are dropped.
+    // 不支持的协议或格式错误的 URL 不作为可用链接。
   }
 
   return undefined
 }
 
+/**
+ * 创建帖子 Markdown 标签组件，预览模式下将图片替换为文本占位。
+ * @param preview - 是否使用摘要预览模式。
+ * @returns Markdown 标签到 React 组件的映射。
+ */
 function createComponents(preview: boolean): Components {
   return {
     a: ({ children, href }) => {
@@ -62,13 +76,19 @@ function createComponents(preview: boolean): Components {
       <p className="text-sm leading-6 text-zinc-300">{children}</p>
     ),
     h1: ({ children }) => (
-      <h1 className="text-lg font-semibold leading-7 text-zinc-100">{children}</h1>
+      <h1 className="text-lg font-semibold leading-7 text-zinc-100">
+        {children}
+      </h1>
     ),
     h2: ({ children }) => (
-      <h2 className="text-base font-semibold leading-6 text-zinc-100">{children}</h2>
+      <h2 className="text-base font-semibold leading-6 text-zinc-100">
+        {children}
+      </h2>
     ),
     h3: ({ children }) => (
-      <h3 className="text-sm font-semibold leading-6 text-zinc-100">{children}</h3>
+      <h3 className="text-sm font-semibold leading-6 text-zinc-100">
+        {children}
+      </h3>
     ),
     ul: ({ children }) => (
       <ul className="list-disc space-y-1 pl-5 text-sm leading-6 text-zinc-300">
@@ -86,8 +106,15 @@ function createComponents(preview: boolean): Components {
       </blockquote>
     ),
     code: ({ children, className, ...props }) => {
-      const isBlock = Boolean(className?.includes('language-'))
-        || Boolean((props as { 'data-language'?: string })['data-language'])
+      const isBlock =
+        Boolean(className?.includes('language-')) ||
+        Boolean(
+          (
+            props as {
+              /** 代码高亮插件写入的代码块语言标识。 */ 'data-language'?: string
+            }
+          )['data-language'],
+        )
       return isBlock ? (
         <code className="block text-zinc-200">{children}</code>
       ) : (
@@ -123,7 +150,9 @@ function createComponents(preview: boolean): Components {
     },
     table: ({ children }) => (
       <div className="overflow-auto rounded border border-zinc-800">
-        <table className="w-full border-collapse text-sm text-zinc-300">{children}</table>
+        <table className="w-full border-collapse text-sm text-zinc-300">
+          {children}
+        </table>
       </div>
     ),
     th: ({ children }) => (
@@ -138,13 +167,23 @@ function createComponents(preview: boolean): Components {
   }
 }
 
-export function PostsMarkdownRenderer({ markdown, preview = false }: PostsMarkdownRendererProps) {
+/**
+ * 渲染帖子 Markdown；预览模式将图片替换为文本占位。
+ * @param props - 正文与可选预览模式。
+ * @returns 异步 Markdown 渲染组件。
+ */
+export function PostsMarkdownRenderer({
+  markdown,
+  preview = false,
+}: PostsMarkdownRendererProps) {
   return (
     <MarkdownHooks
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[[rehypePrettyCode, prettyCodeOptions]]}
       components={createComponents(preview)}
-      fallback={<div className="text-sm leading-6 text-zinc-300">Loading...</div>}
+      fallback={
+        <div className="text-sm leading-6 text-zinc-300">Loading...</div>
+      }
     >
       {markdown}
     </MarkdownHooks>

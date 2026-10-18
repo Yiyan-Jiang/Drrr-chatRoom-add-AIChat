@@ -1,3 +1,5 @@
+"""暴露通过门禁后的账号登录接口。"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +17,7 @@ async def login(
     db: AsyncSession = Depends(get_db),
     _: None = Depends(require_gate_passed),
 ):
+    """校验登录资料并返回访问令牌，用户名或密码错误时返回 HTTP 401。"""
     result = await login_user(db, payload)
     if result is None:
         raise HTTPException(
