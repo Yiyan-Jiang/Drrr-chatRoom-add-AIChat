@@ -153,7 +153,9 @@ function ComposePreview({ markdown }: { markdown: string }) {
         aria-label="Markdown 预览"
       >
         {markdown.trim() ? (
-          <PostMarkdownArticle markdown={markdown} />
+          <div style={{ zoom: 0.85 }}>
+            <PostMarkdownArticle markdown={markdown} />
+          </div>
         ) : (
           <p className="text-sm leading-7 text-[#67676c]">
             输入 Markdown 后将在这里预览。
