@@ -1,19 +1,11 @@
-/** 加载帖子列表并提供发帖入口，创建成功后进入帖子详情。 */
-import { useNavigate } from 'react-router-dom'
+/** 加载帖子列表并提供进入独立发帖页的入口。 */
 import PostCard from '@/components/posts/PostCard'
 import PostEditor from '@/components/posts/PostEditor'
 import { usePosts } from '@/hooks/usePosts'
 
-/** 加载帖子列表并提供发帖入口，创建成功后进入帖子详情。 */
+/** 加载帖子列表并提供进入独立发帖页的入口。 */
 export default function PostsFeed() {
-  const navigate = useNavigate()
-  const { posts, loadState, errorMessage, isCreating, loadPosts, createPost } =
-    usePosts()
-
-  const handleCreate = async (payload: { title: string; content: string }) => {
-    const created = await createPost(payload)
-    navigate(`/posts/${created.id}`)
-  }
+  const { posts, loadState, errorMessage, loadPosts } = usePosts()
 
   return (
     <main className="relative flex h-full min-h-0 flex-col overflow-hidden bg-black text-zinc-100">
@@ -68,7 +60,7 @@ export default function PostsFeed() {
         </div>
       </section>
 
-      <PostEditor disabled={isCreating} onSubmit={handleCreate} />
+      <PostEditor />
     </main>
   )
 }

@@ -28,6 +28,7 @@ const MessageBoardIssueDetail = lazy(
   () => import('../pages/subPage/MessageBoardIssueDetail'),
 )
 const PostsFeed = lazy(() => import('../pages/subPage/PostsFeed'))
+const PostCompose = lazy(() => import('../pages/subPage/PostCompose'))
 const PostDetail = lazy(() => import('../pages/subPage/PostDetail'))
 const ChatRoom = lazy(() => import('../pages/room/ChatRoom'))
 const PrivateChat = lazy(() => import('../pages/room/PrivateChat'))
@@ -102,6 +103,14 @@ export const router = createBrowserRouter([
             element: (
               <RequireAuth>
                 <MessageBoardIssueDetail />
+              </RequireAuth>
+            ),
+          },
+          {
+            path: 'posts/new',
+            element: (
+              <RequireAuth>
+                <PostCompose />
               </RequireAuth>
             ),
           },
