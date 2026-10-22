@@ -45,7 +45,7 @@ export default function RightSidebar() {
   }
 
   return (
-    <div className="ml-1 flex h-[80%] flex-col border-2 border-white bg-[#0D0D0D]">
+    <div className="ml-1 flex h-full flex-col border-2 border-white bg-[#0D0D0D]">
       <form
         action=""
         onSubmit={handleSearch}
