@@ -53,6 +53,8 @@ function RequireAuth({
 
 /** 包含入口验证、登录守卫及延迟加载页面的应用路由。 */
 export const router = createBrowserRouter([
+  // 公开展示静态项目故事，不加载认证或业务连接。
+  { path: 'project-story', element: <SettingsPage /> },
   {
     path: '/',
     element: <App />,
