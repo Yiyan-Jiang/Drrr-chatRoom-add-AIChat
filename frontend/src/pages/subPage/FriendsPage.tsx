@@ -1,291 +1,176 @@
-/** 展示好友列表和待处理申请，提供好友申请处理与删除入口。 */
-import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import toast from 'react-hot-toast'
+/** 展示好友发布的帖子，并提供游标分页与空状态入口。 */
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { friendsApi } from '@/api/friends'
-import { resolveChatAvatarAssets } from '@/assets/chatAvatarCatalog'
-import type { Friend, FriendRequest } from '@/types/friends'
-import { getUserDisplayName } from '@/utils/userDisplayName'
+import { postsApi, type PostListItem } from '@/api/posts'
+import PostCard from '@/components/posts/PostCard'
 import { logger } from '@/utils/logger'
 
-const pageSize = 12
+const pageSize = 20
 
-/** 返回好友申请中指定一方的显示名。 */
-function requestName(request: FriendRequest, side: 'requester' | 'recipient') {
-  return getUserDisplayName(
-    side === 'requester' ? request.requester : request.recipient,
-  )
-}
-
-/** 仅保留仍待处理的好友申请。 */
-function filterPendingFriendRequests(requests: FriendRequest[]) {
-  return requests.filter((request) => request.status === 'pending')
-}
-
-/** 展示好友列表和待处理申请，提供好友申请处理与删除入口。 */
+/** 展示好友发布的帖子，并提供游标分页与空状态入口。 */
 export default function FriendsPage() {
-  const navigate = useNavigate()
-  const [friends, setFriends] = useState<Friend[]>([])
-  const [incomingFriendRequests, setIncomingFriendRequests] = useState<
-    FriendRequest[]
-  >([])
-  const [outgoingFriendRequests, setOutgoingFriendRequests] = useState<
-    FriendRequest[]
-  >([])
-  const [friendPage, setFriendPage] = useState(1)
-  const [hasMoreFriends, setHasMoreFriends] = useState(false)
+  const [posts, setPosts] = useState<PostListItem[]>([])
+  const [friendCount, setFriendCount] = useState<number | null>(null)
+  const [nextCursor, setNextCursor] = useState<number | null>(null)
+  const [hasMore, setHasMore] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [busyRequestId, setBusyRequestId] = useState<number | null>(null)
-  const [busyFriendId, setBusyFriendId] = useState<number | null>(null)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [error, setError] = useState(false)
+  const requestId = useRef(0)
 
-  const loadFriends = useCallback(async () => {
-    const page = await friendsApi.listFriends({ page: friendPage, pageSize })
-    setFriends(page.items)
-    setHasMoreFriends(page.has_more)
-  }, [friendPage])
-
-  const loadRequests = useCallback(async () => {
-    const [incoming, outgoing] = await Promise.all([
-      friendsApi.listRequests('incoming'),
-      friendsApi.listRequests('outgoing'),
-    ])
-    setIncomingFriendRequests(filterPendingFriendRequests(incoming.items))
-    setOutgoingFriendRequests(filterPendingFriendRequests(outgoing.items))
-  }, [])
-
-  const loadAll = useCallback(async () => {
+  /** 刷新好友动态首页并同步好友总数。 */
+  const loadFeed = useCallback(async () => {
+    const currentRequest = ++requestId.current
     setLoading(true)
+    setLoadingMore(false)
+    setError(false)
     try {
-      await Promise.all([loadFriends(), loadRequests()])
-    } catch (error) {
-      logger.error('[friends-page] failed to load friends', {
-        message: error instanceof Error ? error.message : String(error),
+      const [page, friends] = await Promise.all([
+        postsApi.list({ limit: pageSize, friends_only: true }),
+        friendsApi.listFriends({ page: 1, pageSize: 1 }),
+      ])
+      if (requestId.current !== currentRequest) return
+      setPosts(page.items)
+      setNextCursor(page.next_cursor)
+      setHasMore(page.has_more)
+      setFriendCount(friends.total)
+    } catch (loadError) {
+      if (requestId.current !== currentRequest) return
+      logger.error('[friends-feed] failed to load friends feed', {
+        message:
+          loadError instanceof Error ? loadError.message : String(loadError),
       })
-      toast.error('加载好友信息失败')
+      setError(true)
     } finally {
-      setLoading(false)
+      if (requestId.current === currentRequest) setLoading(false)
     }
-  }, [loadFriends, loadRequests])
+  }, [])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      void loadAll()
+      void loadFeed()
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [loadAll])
+  }, [loadFeed])
 
-  const acceptRequest = async (requestId: number) => {
-    setBusyRequestId(requestId)
+  /** 使用下一条游标追加好友帖子。 */
+  const loadMore = async () => {
+    if (nextCursor === null || loadingMore) return
+    const currentRequest = requestId.current
+    setLoadingMore(true)
     try {
-      await friendsApi.acceptRequest(requestId)
-      await Promise.all([loadFriends(), loadRequests()])
-      toast.success('已接受好友申请')
+      const page = await postsApi.list({
+        limit: pageSize,
+        cursor: nextCursor,
+        friends_only: true,
+      })
+      if (requestId.current !== currentRequest) return
+      setPosts((currentPosts) => [...currentPosts, ...page.items])
+      setNextCursor(page.next_cursor)
+      setHasMore(page.has_more)
+    } catch (loadError) {
+      if (requestId.current !== currentRequest) return
+      logger.error('[friends-feed] failed to load more posts', {
+        message:
+          loadError instanceof Error ? loadError.message : String(loadError),
+      })
+      setError(true)
     } finally {
-      setBusyRequestId(null)
-    }
-  }
-
-  const rejectRequest = async (requestId: number) => {
-    setBusyRequestId(requestId)
-    try {
-      await friendsApi.rejectRequest(requestId)
-      await loadRequests()
-      toast.success('已拒绝好友申请')
-    } finally {
-      setBusyRequestId(null)
-    }
-  }
-
-  const cancelRequest = async (requestId: number) => {
-    setBusyRequestId(requestId)
-    try {
-      await friendsApi.cancelRequest(requestId)
-      await loadRequests()
-      toast.success('已取消好友申请')
-    } finally {
-      setBusyRequestId(null)
-    }
-  }
-
-  const deleteFriend = async (friendId: number) => {
-    setBusyFriendId(friendId)
-    try {
-      await friendsApi.deleteFriend(friendId)
-      await loadFriends()
-      toast.success('已删除好友')
-    } finally {
-      setBusyFriendId(null)
+      if (requestId.current === currentRequest) setLoadingMore(false)
     }
   }
 
   return (
-    <div className="h-full min-h-0 overflow-auto bg-black text-zinc-100">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-8">
-        <header className="border-b border-zinc-800 pb-4">
-          <h1 className="text-2xl font-semibold tracking-normal text-white">
-            友达
-          </h1>
-          <p className="mt-2 text-sm text-zinc-500">
-            管理好友、处理申请，并从这里发起私聊。
-          </p>
+    <main className="h-full min-h-0 overflow-auto bg-black text-zinc-100">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-4 py-6 sm:px-6">
+        <header className="flex items-end justify-between gap-3 border-b border-zinc-800 pb-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-white">好友动态</h1>
+            <p className="mt-2 text-sm text-zinc-500">好友最近发布的帖子</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/friends/manage"
+              className="border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 transition hover:border-zinc-500"
+            >
+              管理好友
+            </Link>
+            <button
+              type="button"
+              onClick={() => void loadFeed()}
+              disabled={loading}
+              className="border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 transition hover:border-zinc-500 disabled:cursor-not-allowed disabled:text-zinc-600"
+            >
+              {loading ? '刷新中...' : '刷新'}
+            </button>
+          </div>
         </header>
 
-        <section className="rounded-sm border border-zinc-800 bg-zinc-950/40">
-          <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
-            <h2 className="text-sm font-semibold text-white">好友列表</h2>
-            <div className="flex items-center gap-2 text-xs text-zinc-400">
-              <button
-                type="button"
-                disabled={friendPage <= 1 || loading}
-                onClick={() => setFriendPage((page) => Math.max(1, page - 1))}
-                className="border border-zinc-700 px-2 py-1 transition hover:border-cyan-500 disabled:cursor-not-allowed disabled:text-zinc-600"
-              >
-                上一页
-              </button>
-              <span>{friendPage}</span>
-              <button
-                type="button"
-                disabled={!hasMoreFriends || loading}
-                onClick={() => setFriendPage((page) => page + 1)}
-                className="border border-zinc-700 px-2 py-1 transition hover:border-cyan-500 disabled:cursor-not-allowed disabled:text-zinc-600"
-              >
-                下一页
-              </button>
-            </div>
-          </div>
+        {loading && posts.length === 0 && (
+          <p className="border border-zinc-800 bg-zinc-950 px-4 py-8 text-center text-sm text-zinc-400">
+            正在加载好友动态...
+          </p>
+        )}
 
-          {loading ? (
-            <p className="px-4 py-8 text-center text-sm text-zinc-500">
-              加载中...
+        {error && (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center justify-between gap-3 border border-red-900/70 bg-red-950/30 px-4 py-4"
+          >
+            <p className="text-sm text-red-100">好友动态加载失败，请重试。</p>
+            <button
+              type="button"
+              onClick={() => void loadFeed()}
+              disabled={loading}
+              className="border border-red-800 px-3 py-1.5 text-sm text-red-100 transition hover:bg-red-950 disabled:cursor-not-allowed disabled:text-zinc-600"
+            >
+              重新加载
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && friendCount === 0 && (
+          <div className="border border-zinc-800 bg-zinc-950 px-4 py-8 text-center text-sm text-zinc-400">
+            <p>还没有添加好友，去添加好友吧。</p>
+            <Link
+              to="/friends/manage"
+              className="mt-3 inline-block text-zinc-200 underline underline-offset-4 hover:text-white"
+            >
+              添加好友
+            </Link>
+          </div>
+        )}
+
+        {!loading &&
+          !error &&
+          friendCount !== null &&
+          friendCount > 0 &&
+          posts.length === 0 && (
+            <p className="border border-zinc-800 bg-zinc-950 px-4 py-8 text-center text-sm text-zinc-400">
+              这里还是空空如也~
             </p>
-          ) : friends.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-zinc-500">
-              暂无好友。可以在聊天室或帖子头像上发起好友申请。
-            </p>
-          ) : (
-            <ul className="grid gap-3 p-4 md:grid-cols-2">
-              {friends.map((friend) => {
-                const assets = resolveChatAvatarAssets(friend.user.avatar_key)
-                const label = getUserDisplayName(friend.user)
-                return (
-                  <li
-                    key={friend.user.id}
-                    className="flex items-center gap-3 border border-zinc-800 bg-black px-3 py-3"
-                  >
-                    <img
-                      src={assets.avatar}
-                      alt=""
-                      className="h-12 w-12 shrink-0 object-cover"
-                      loading="lazy"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-semibold text-zinc-100">
-                        {label}
-                      </div>
-                      <div className="truncate text-xs text-zinc-500">
-                        @{friend.user.username}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        navigate(`/private-chat/${friend.user.id}`)
-                      }
-                      className="border border-zinc-700 px-3 py-1.5 text-xs transition hover:border-cyan-500"
-                    >
-                      私聊
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busyFriendId === friend.user.id}
-                      onClick={() => void deleteFriend(friend.user.id)}
-                      className="border border-zinc-800 px-3 py-1.5 text-xs text-zinc-400 transition hover:border-red-500 hover:text-red-300 disabled:cursor-not-allowed"
-                    >
-                      删除
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
           )}
-        </section>
 
-        <section className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-sm border border-zinc-800 bg-zinc-950/40">
-            <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold text-white">
-              收到的申请
-            </h2>
-            {incomingFriendRequests.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-zinc-500">
-                暂无收到的好友申请。
-              </p>
-            ) : (
-              <ul className="divide-y divide-zinc-800">
-                {incomingFriendRequests.map((request) => (
-                  <li
-                    key={request.id}
-                    className="flex items-center justify-between gap-3 px-4 py-3"
-                  >
-                    <span className="min-w-0 truncate text-sm text-zinc-200">
-                      {requestName(request, 'requester')}
-                    </span>
-                    <div className="flex shrink-0 gap-2">
-                      <button
-                        type="button"
-                        disabled={busyRequestId === request.id}
-                        onClick={() => void acceptRequest(request.id)}
-                        className="border border-zinc-700 px-2 py-1 text-xs transition hover:border-cyan-500 disabled:cursor-not-allowed"
-                      >
-                        接受
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busyRequestId === request.id}
-                        onClick={() => void rejectRequest(request.id)}
-                        className="border border-zinc-700 px-2 py-1 text-xs transition hover:border-red-500 disabled:cursor-not-allowed"
-                      >
-                        拒绝
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
+        {posts.length > 0 && (
+          <div className="flex flex-col gap-3">
+            {posts.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
           </div>
+        )}
 
-          <div className="rounded-sm border border-zinc-800 bg-zinc-950/40">
-            <h2 className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold text-white">
-              发出的申请
-            </h2>
-            {outgoingFriendRequests.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-zinc-500">
-                暂无发出的好友申请。
-              </p>
-            ) : (
-              <ul className="divide-y divide-zinc-800">
-                {outgoingFriendRequests.map((request) => (
-                  <li
-                    key={request.id}
-                    className="flex items-center justify-between gap-3 px-4 py-3"
-                  >
-                    <span className="min-w-0 truncate text-sm text-zinc-200">
-                      {requestName(request, 'recipient')}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={busyRequestId === request.id}
-                      onClick={() => void cancelRequest(request.id)}
-                      className="shrink-0 border border-zinc-700 px-2 py-1 text-xs transition hover:border-red-500 disabled:cursor-not-allowed"
-                    >
-                      取消
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </section>
+        {hasMore && !error && (
+          <button
+            type="button"
+            onClick={() => void loadMore()}
+            disabled={loadingMore || loading}
+            className="self-center border border-zinc-700 px-4 py-2 text-sm text-zinc-200 transition hover:border-zinc-500 disabled:cursor-not-allowed disabled:text-zinc-600"
+          >
+            {loadingMore ? '加载中...' : '加载更多'}
+          </button>
+        )}
       </div>
-    </div>
+    </main>
   )
 }

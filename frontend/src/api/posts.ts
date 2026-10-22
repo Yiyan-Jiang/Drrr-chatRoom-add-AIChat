@@ -127,6 +127,7 @@ export const postsApi = {
   list: async (params?: {
     /** 继续查询帖子列表使用的记录编号游标。 */ cursor?: number
     /** 本次最多返回的帖子数量。 */ limit?: number
+    /** 仅查询当前用户好友发布的帖子。 */ friends_only?: boolean
   }): Promise<PaginatedPostsResponse> => {
     const { data } = await apiClient.get<PaginatedPostsResponse>('/posts/', {
       params,

@@ -99,3 +99,24 @@ class PaginatedPrivateMessagesResponse(BaseModel):
     items: list[PrivateMessageInDB] = Field(default_factory=list)
     has_more: bool = False
     next_before_id: int | None = None
+
+
+class PrivateConversation(BaseModel):
+    """返回会话对象、最新消息及当前用户收到的未读数量。"""
+
+    user: UserPublic
+    latest_message: PrivateMessageInDB
+    unread_count: int
+
+
+class PrivateConversationsResponse(BaseModel):
+    """返回按最新消息排序的会话分页。"""
+
+    items: list[PrivateConversation]
+    has_more: bool
+
+
+class PrivateReadRequest(BaseModel):
+    """使用已显示的接收消息编号限制本次已读更新范围。"""
+
+    through_id: int = Field(gt=0, strict=True)

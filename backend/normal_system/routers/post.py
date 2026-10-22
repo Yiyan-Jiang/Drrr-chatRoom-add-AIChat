@@ -43,9 +43,12 @@ async def list_posts_endpoint(
     user_id: int = Depends(get_current_user_id),
     limit: int = Query(20, ge=1, le=50),
     cursor: int | None = Query(default=None, ge=1),
+    friends_only: bool = Query(False),
 ):
-    """返回登录用户可查看的已发布帖子页。"""
-    return await list_posts(db, viewer_id=user_id, limit=limit, cursor=cursor)
+    """返回已发布帖子页，按需限定为当前登录用户的好友动态。"""
+    return await list_posts(
+        db, viewer_id=user_id, limit=limit, cursor=cursor, friends_only=friends_only
+    )
 
 
 @router.post("/", response_model=PostDetail, status_code=status.HTTP_201_CREATED)

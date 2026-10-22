@@ -10,7 +10,6 @@ const NAV_ITEMS = [
   { path: '/home', label: '主页' },
   { path: '/my', label: '我的页面' },
   { path: '/friends', label: '友达' },
-  { path: '/mailbox', label: '邮箱' },
   { path: '/profile', label: '个人资料' },
   { path: '/settings', label: '设定' },
   { path: '/help', label: '帮助' },

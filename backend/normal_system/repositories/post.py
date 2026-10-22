@@ -2,10 +2,10 @@
 
 from datetime import datetime
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from normal_system.models import User
+from normal_system.models import Friendship, User
 from normal_system.models.post import Post, PostComment, PostFavorite, PostLike
 from normal_system.schemas.post import (
     PaginatedCommentsResponse,
@@ -130,10 +130,28 @@ async def list_posts(
     viewer_id: int | None,
     limit: int = 20,
     cursor: int | None = None,
+    friends_only: bool = False,
 ) -> PaginatedPostsResponse:
-    """按帖子 ID 倒序读取已发布帖子页。"""
+    """按帖子 ID 倒序读取已发布帖子，可限定为浏览者当前好友发布的内容。"""
     safe_limit = max(1, min(limit, 50))
     filters = [Post.status == "published"]
+    if friends_only:
+        filters.append(
+            select(Friendship.id)
+            .where(
+                or_(
+                    and_(
+                        Friendship.user_low_id == viewer_id,
+                        Friendship.user_high_id == Post.author_id,
+                    ),
+                    and_(
+                        Friendship.user_high_id == viewer_id,
+                        Friendship.user_low_id == Post.author_id,
+                    ),
+                )
+            )
+            .exists()
+        )
     if cursor is not None:
         filters.append(Post.id < cursor)
     result = await db.execute(
