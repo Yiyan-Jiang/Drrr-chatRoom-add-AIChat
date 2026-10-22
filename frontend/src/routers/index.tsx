@@ -13,7 +13,9 @@ const Ddddr = lazy(() => import('../pages/auth/Ddddr'))
 const MainLayout = lazy(() => import('../pages/subPage/MainLayout'))
 const MyPage = lazy(() => import('../pages/subPage/MyPage'))
 const FriendsPage = lazy(() => import('../pages/subPage/FriendsPage'))
-const MailboxPage = lazy(() => import('../pages/subPage/MailboxPage'))
+const FriendManagementPage = lazy(
+  () => import('../pages/subPage/FriendManagementPage'),
+)
 const ProfilePage = lazy(() => import('../pages/subPage/ProfilePage'))
 const SettingsPage = lazy(() => import('../pages/subPage/SettingsPage'))
 const HelpPage = lazy(() => import('../pages/subPage/HelpPage'))
@@ -143,7 +145,7 @@ export const router = createBrowserRouter([
               { path: 'rooms', element: <Navigate to="/home/rooms" replace /> },
               { path: 'my', element: <MyPage /> },
               { path: 'friends', element: <FriendsPage /> },
-              { path: 'mailbox', element: <MailboxPage /> },
+              { path: 'friends/manage', element: <FriendManagementPage /> },
               { path: 'profile', element: <ProfilePage /> },
               { path: 'settings', element: <SettingsPage /> },
               { path: 'help', element: <HelpPage /> },

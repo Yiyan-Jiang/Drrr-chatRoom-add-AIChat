@@ -599,6 +599,61 @@ async function smoke() {
   assert.equal(detail.favorited_by_me, true)
   console.log('PASS post permissions, comments, likes and favorites')
 
+  // Arrange（准备）：Alice 与 Bob、Carol 为好友，Bob 和 Carol 互非好友。
+  assert.deepEqual(
+    (await alice.http.request('GET', '/posts/?friends_only=true')).items,
+    [],
+  )
+  const friendPost = await bob.http.request(
+    'POST',
+    '/posts/',
+    { title: '好友帖子', content: '好友动态验收' },
+    201,
+  )
+  cleanup.push({
+    name: `post ${friendPost.id}`,
+    run: () =>
+      bob.http.request('DELETE', `/posts/${friendPost.id}`, undefined, 204),
+  })
+  const newerPost = await carol.http.request(
+    'POST',
+    '/posts/',
+    { title: '较新好友帖子', content: '分页验收' },
+    201,
+  )
+  cleanup.push({
+    name: `post ${newerPost.id}`,
+    run: () =>
+      carol.http.request('DELETE', `/posts/${newerPost.id}`, undefined, 204),
+  })
+  // Act（执行）：通过真实好友范围查询浏览最新与下一页帖子。
+  const friendFeed = await alice.http.request(
+    'GET',
+    '/posts/?friends_only=true&limit=1',
+  )
+  assert.equal(friendFeed.items[0].id, newerPost.id)
+  assert.equal(friendFeed.has_more, true)
+  const friendNext = await alice.http.request(
+    'GET',
+    `/posts/?friends_only=true&limit=1&cursor=${friendFeed.next_cursor}`,
+  )
+  assert.equal(friendNext.items[0].id, friendPost.id)
+  assert.equal(friendNext.has_more, false)
+  // Assert（断言）：自己的帖子和非好友帖子不进入好友动态，普通帖子列表保持可见。
+  const bobFeed = await bob.http.request('GET', '/posts/?friends_only=true')
+  assert.deepEqual(
+    bobFeed.items.map((item) => item.id),
+    [post.id],
+  )
+  assert.ok(
+    (await bob.http.request('GET', '/posts/')).items.some(
+      (item) => item.id === newerPost.id,
+    ),
+  )
+  console.log(
+    'PASS friends-only posts, newest-first pagination and author scope',
+  )
+
   // Given（前置）：删除第三个临时账号，保留其尚未过期的令牌触发真实外键错误。
   const removed = await register('removed')
   await removed.http.request('DELETE', `/users/${removed.id}`, undefined, 204)

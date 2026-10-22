@@ -169,7 +169,7 @@ export default function PrivateChat() {
         statusText={chat.error || undefined}
         onComposerChange={chat.setComposerValue}
         onSubmit={chat.sendMessage}
-        onLeaveRoom={() => navigate('/mailbox')}
+        onLeaveRoom={() => navigate('/friends/manage')}
         onOpenInfo={() => navigate('/my')}
       />
       <ChatMessageViewport
