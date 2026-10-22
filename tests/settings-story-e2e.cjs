@@ -1,4 +1,4 @@
-/** 从公开 React 入口验收海报、起源介绍、聊天入口和轻微视差。 */
+/** 从公开 React 入口验收海报、产品实景、消息演示、聊天入口和轻微视差。 */
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
@@ -102,7 +102,7 @@ const origin = process.env.STORY_ORIGIN || "http://127.0.0.1:5180";
       });
       await page.locator('.film-nav a[href="#conversation"]').click();
       await page
-        .getByText("晚上好。今天有什么想聊的吗？", { exact: true })
+        .getByRole("heading", { name: /从作品里的相遇，\s*到真正的聊天室。/ })
         .waitFor();
       assert.equal(
         await page
@@ -118,10 +118,63 @@ const origin = process.env.STORY_ORIGIN || "http://127.0.0.1:5180";
         await img.evaluate((el) => el.decode());
         assert.equal(await img.evaluate((el) => el.naturalWidth > 0), true);
       }
-      // Assert（断言）：完整介绍无技术块和剧集截图，交流入口保持真实目标。
+      // Act（执行）：用键盘与点击查看消息阶段，展开实现说明。
+      await page.locator(".film-product-caption a").click();
+      await page.getByRole("button", { name: "确认", exact: true }).focus();
+      await page.keyboard.press("Enter");
+      assert.equal(
+        (await page.locator(".film-message-receipt").innerText()).replace(
+          /\s+/g,
+          "",
+        ),
+        "✓已保存·已确认",
+      );
+      await page.getByText("看看背后的实现", { exact: false }).click();
+      await page
+        .getByText(
+          "数据库事务提交后，Socket.IO 才发送确认与房间广播。确认代表服务器已保存，不代表对方已读。",
+          { exact: true },
+        )
+        .waitFor();
+      await page.getByRole("button", { name: "重连", exact: true }).click();
+      assert.equal(
+        (await page.locator(".film-message-receipt").innerText()).replace(
+          /\s+/g,
+          "",
+        ),
+        "✓历史已回补",
+      );
+      assert.equal(
+        await page.locator(".film-engineering").getAttribute("open"),
+        null,
+      );
+      await page.screenshot({
+        path: ".tmp/product-" + name + "-journey.png",
+        animations: "disabled",
+      });
+      await page.getByRole("button", { name: "发送", exact: true }).click();
+      assert.equal(
+        (await page.locator(".film-message-receipt").innerText()).replace(
+          /\s+/g,
+          "",
+        ),
+        "◌等待回执",
+      );
+      if (width <= 680) {
+        await page.locator(".film-screen-scroll").evaluate((el) => {
+          el.scrollLeft = el.scrollWidth;
+        });
+        assert.ok(
+          await page
+            .locator(".film-screen-scroll")
+            .evaluate((el) => el.scrollLeft > 0),
+          "小屏可横向查看产品界面",
+        );
+      }
+      // Assert（断言）：完整介绍无技术代码块和剧集截图，交流入口保持真实目标。
       assert.deepEqual(
         await page
-          .locator(".film-destinations a")
+          .locator(".film-product-heading a, .film-continuations a")
           .evaluateAll((links) =>
             links.map((link) => link.getAttribute("href")),
           ),
@@ -138,7 +191,7 @@ const origin = process.env.STORY_ORIGIN || "http://127.0.0.1:5180";
       assert.deepEqual(images, [
         "/project-story/assets/drrr-keyvisual.jpg",
         "/project-story/assets/drrr-gathering.png",
-        "/project-story/assets/avatar-setton.png",
+        "/project-story/assets/chat-room.png",
         "/project-story/assets/avatar-kanra.png",
       ]);
       assert.equal(
@@ -154,7 +207,7 @@ const origin = process.env.STORY_ORIGIN || "http://127.0.0.1:5180";
       assert.deepEqual(errors, []);
       assert.deepEqual(blocked, []);
       console.log(
-        `PASS ${name}: posters decode, parallax mode, keyboard, origin/chat navigation, real links, no overflow or business requests`,
+        `PASS ${name}: posters/product decode, message stages and details, keyboard/navigation, real links, no overflow or business requests`,
       );
       await context.close();
     }

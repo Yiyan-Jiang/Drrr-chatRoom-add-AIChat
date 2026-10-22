@@ -10,6 +10,6 @@
 
 - `drrr-gathering.png`：官方 2015 年特别活动宣传主视觉，原样保存。图片：https://www.durarara.com/special/img/event/20151101/key.png ，来源页面：https://www.durarara.com/special/event_20151101.html 。
 - `drrr-keyvisual.jpg`：官方群像主视觉，来源见上文。
-- 页面仅使用宣传主视觉和已有聊天头像，不使用动画剧集截图。
+- 作品素材使用宣传主视觉和已有聊天头像，不使用动画剧集截图；产品展示复用本机真实聊天室截图 `chat-room.png`，截图中的对话为演示内容。
 
 图像版权属于原权利方；页面为非官方个人学习项目，不代表官方产品或合作。
