@@ -34,9 +34,12 @@ async def list_friends_endpoint(
     user_id: int = Depends(get_current_user_id),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=50),
+    search: str = Query(""),
 ):
-    """返回当前登录用户的分页好友列表。"""
-    return await list_friends(db, user_id=user_id, page=page, page_size=page_size)
+    """按昵称或用户名筛选当前用户的好友，再返回分页结果。"""
+    return await list_friends(
+        db, user_id=user_id, page=page, page_size=page_size, search=search.strip()
+    )
 
 
 @router.post(

@@ -12,17 +12,22 @@ import type {
 export const friendsApi = {
   /**
    * 查询当前用户的好友列表。
-   * @param params - 可选页码与每页数量。
+   * @param params - 可选页码、每页数量和昵称或用户名关键词。
    * @returns 好友分页。
    */
   listFriends: async (params?: {
     /** 要查询的好友列表页码。 */ page?: number
     /** 每页最多返回的好友数量。 */ pageSize?: number
+    /** 按昵称或用户名匹配的关键词。 */ search?: string
   }): Promise<PaginatedFriendsResponse> => {
     const { data } = await apiClient.get<PaginatedFriendsResponse>(
       '/friends/',
       {
-        params: { page: params?.page, page_size: params?.pageSize },
+        params: {
+          page: params?.page,
+          page_size: params?.pageSize,
+          search: params?.search,
+        },
       },
     )
     return data

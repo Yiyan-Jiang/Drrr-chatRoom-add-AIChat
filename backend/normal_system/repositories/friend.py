@@ -88,8 +88,9 @@ async def list_friends(
     user_id: int,
     page: int = 1,
     page_size: int = 20,
+    search: str = "",
 ) -> PaginatedFriendsResponse:
-    """按页码读取好友资料及关系创建时间，同时返回总数。"""
+    """按去除首尾空白的昵称或用户名关键词筛选好友，返回分页和匹配总数。"""
     safe_page = max(1, page)
     safe_page_size = max(1, min(page_size, 50))
     offset = (safe_page - 1) * safe_page_size
@@ -97,12 +98,7 @@ async def list_friends(
     relation_filter = or_(
         Friendship.user_low_id == user_id, Friendship.user_high_id == user_id
     )
-    total_res = await db.execute(
-        select(func.count()).select_from(Friendship).where(relation_filter)
-    )
-    total = total_res.scalar_one()
-
-    res = await db.execute(
+    query = (
         select(Friendship, User)
         .join(
             User,
@@ -118,7 +114,19 @@ async def list_friends(
             ),
         )
         .where(relation_filter)
-        .order_by(Friendship.created_at.desc(), Friendship.id.desc())
+    )
+    if search:
+        query = query.where(
+            or_(
+                User.username.icontains(search, autoescape=True),
+                User.nickname.icontains(search, autoescape=True),
+            )
+        )
+    total_res = await db.execute(select(func.count()).select_from(query.subquery()))
+    total = total_res.scalar_one()
+
+    res = await db.execute(
+        query.order_by(Friendship.created_at.desc(), Friendship.id.desc())
         .offset(offset)
         .limit(safe_page_size)
     )

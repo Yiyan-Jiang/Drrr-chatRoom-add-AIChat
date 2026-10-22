@@ -354,6 +354,39 @@ async function smoke() {
   assert.equal(accepted.status, 'accepted')
   const friends = await alice.http.request('GET', '/friends/')
   assert.ok(friends.items.some((item) => item.user.id === bob.id))
+  // When（操作）：按用户名和昵称搜索，核对通配符按字面匹配且不返回非好友。
+  await bob.http.request('PUT', '/users/me', {
+    nickname: `好友_${runId.slice(0, 8)}_%`,
+  })
+  for (const search of [
+    bob.username.toUpperCase(),
+    `好友_${runId.slice(0, 8)}`,
+    '%',
+  ]) {
+    const matched = await alice.http.request(
+      'GET',
+      `/friends/?search=${encodeURIComponent(search)}&page=1&page_size=1`,
+    )
+    assert.equal(matched.total, 1)
+    assert.equal(matched.items[0].user.id, bob.id)
+    assert.equal(matched.has_more, false)
+  }
+  for (const search of [`no_match_${runId}`, alice.username]) {
+    const empty = await alice.http.request(
+      'GET',
+      `/friends/?search=${encodeURIComponent(search)}`,
+    )
+    // Then（结果）：无匹配或搜索非好友时，记录与总数都为空。
+    assert.deepEqual(empty.items, [])
+    assert.equal(empty.total, 0)
+    assert.equal(empty.has_more, false)
+  }
+  const restoredFriends = await alice.http.request(
+    'GET',
+    '/friends/?search=%20%20',
+  )
+  assert.equal(restoredFriends.total, friends.total)
+  console.log('PASS friend search, literal keywords, scope and cleared results')
   await join(
     aliceSocket,
     'join_private_chat',
