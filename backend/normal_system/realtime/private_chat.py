@@ -145,3 +145,5 @@ async def send_private_message(sid: str, data: dict):
         message_data,
         room=private_room_name(user_id, recipient_id),
     )
+    await sio.emit("mailbox_changed", to=f"user_{user_id}")
+    await sio.emit("mailbox_changed", to=f"user_{recipient_id}")

@@ -13,7 +13,16 @@ from normal_system.services.friend import (
     reject_friend_request,
 )
 from normal_system.repositories.friend import list_friend_requests, list_friends
-from normal_system.repositories.private_message import list_private_messages
+from normal_system.repositories.private_message import (
+    list_private_messages,
+    list_private_conversations,
+    mark_private_messages_read,
+)
+from normal_system.schemas.friend import (
+    PrivateConversationsResponse,
+    PrivateReadRequest,
+)
+from normal_system.realtime.server import sio
 from normal_system.schemas import (
     FriendRequestCreate,
     FriendRequestInDB,
@@ -164,3 +173,32 @@ async def list_private_messages_endpoint(
     return await list_private_messages(
         db, user_id=user_id, friend_id=friend_id, limit=limit, before_id=before_id
     )
+
+
+@private_message_router.get(
+    "/conversations", response_model=PrivateConversationsResponse
+)
+async def list_private_conversations_endpoint(
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=50),
+):
+    """列出当前用户参与的私聊会话，包含最新消息和未读数量。"""
+    return await list_private_conversations(db, user_id, page, page_size)
+
+
+@private_message_router.put(
+    "/{friend_id:int}/read", status_code=status.HTTP_204_NO_CONTENT
+)
+async def mark_private_messages_read_endpoint(
+    friend_id: int,
+    payload: PrivateReadRequest,
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    """持久化接收方已读范围，并通知该用户的其他在线会话刷新邮箱。"""
+    if not await mark_private_messages_read(db, user_id, friend_id, payload.through_id):
+        raise HTTPException(status_code=404, detail="Received message not found")
+    await db.commit()
+    await sio.emit("mailbox_changed", to=f"user_{user_id}")

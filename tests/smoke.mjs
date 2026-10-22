@@ -427,6 +427,144 @@ async function smoke() {
     'PASS friend request, acceptance, two-client private delivery and persistence',
   )
 
+  // Arrange（准备）：消息已持久化，读取历史不会自动清除未读。
+  await anonymous.request(
+    'GET',
+    '/private-messages/conversations',
+    undefined,
+    401,
+  )
+  let inbox = await bob.http.request(
+    'GET',
+    '/private-messages/conversations?page_size=1',
+  )
+  assert.equal(inbox.items[0].user.id, alice.id)
+  assert.equal(inbox.items[0].latest_message.id, privateMessage.id)
+  assert.equal(inbox.items[0].unread_count, 1)
+  assert.equal(inbox.has_more, false)
+  const senderInbox = await alice.http.request(
+    'GET',
+    '/private-messages/conversations',
+  )
+  assert.equal(senderInbox.items[0].unread_count, 0)
+  // Act（执行）：从已显示消息边界标记已读，拒绝不属于接收者的边界。
+  await alice.http.request(
+    'PUT',
+    `/private-messages/${bob.id}/read`,
+    { through_id: privateMessage.id },
+    404,
+  )
+  await bob.http.request(
+    'PUT',
+    `/private-messages/${alice.id}/read`,
+    { through_id: privateMessage.id },
+    204,
+  )
+  await login(bob)
+  inbox = await bob.http.request('GET', '/private-messages/conversations')
+  assert.equal(inbox.items[0].unread_count, 0)
+  const changed = waitForEvent(bobSocket, 'mailbox_changed')
+  const secondMessage = await send(
+    aliceSocket,
+    bobSocket,
+    'send_private_message',
+    {
+      ...privatePayload,
+      content: '新的未读消息',
+      client_message_id: `second_${runId}`,
+    },
+    'private_message_ack',
+    'private_new_message',
+  )
+  await changed
+  await bob.http.request(
+    'PUT',
+    `/private-messages/${alice.id}/read`,
+    { through_id: privateMessage.id },
+    204,
+  )
+  // Assert（断言）：较旧的已读请求不覆盖新消息，重新登录后状态仍正确。
+  inbox = await bob.http.request('GET', '/private-messages/conversations')
+  assert.equal(inbox.items[0].latest_message.id, secondMessage.id)
+  assert.equal(inbox.items[0].unread_count, 1)
+  await bob.http.request(
+    'PUT',
+    `/private-messages/${alice.id}/read`,
+    { through_id: secondMessage.id },
+    204,
+  )
+  await bob.http.request('PUT', '/users/me', {
+    nickname: '资料验收',
+    bio: '冒烟测试简介',
+    avatar_key: 'gray',
+  })
+  await login(bob)
+  const savedProfile = await bob.http.request('GET', '/users/me')
+  assert.equal(savedProfile.nickname, '资料验收')
+  assert.equal(savedProfile.bio, '冒烟测试简介')
+  assert.equal(savedProfile.avatar_key, 'gray')
+  console.log(
+    'PASS mailbox scope, unread persistence, read boundary and profile changes',
+  )
+
+  // Arrange（准备）：第三个账号只与 Alice 建立会话，用于验证分页和隔离。
+  const carol = await register('c')
+  assert.deepEqual(
+    (await carol.http.request('GET', '/private-messages/conversations')).items,
+    [],
+  )
+  await carol.http.request(
+    'PUT',
+    `/private-messages/${alice.id}/read`,
+    { through_id: privateMessage.id },
+    404,
+  )
+  const carolRequest = await alice.http.request(
+    'POST',
+    '/friends/requests',
+    { recipient_id: carol.id },
+    201,
+  )
+  await carol.http.request(
+    'POST',
+    `/friends/requests/${carolRequest.id}/accept`,
+  )
+  const carolSocket = await connect(carol)
+  // Act（执行）：接收方未加入私聊频道时仍应收到邮箱刷新事件。
+  const carolChanged = waitForEvent(carolSocket, 'mailbox_changed')
+  const carolAck = waitForEvent(
+    aliceSocket,
+    'private_message_ack',
+    (message) => message.client_message_id === `carol_${runId}`,
+  )
+  aliceSocket.emit('send_private_message', {
+    recipient_id: carol.id,
+    content: '分页会话',
+    client_message_id: `carol_${runId}`,
+  })
+  await Promise.all([carolChanged, carolAck])
+  // Assert（断言）：最新会话排在首位，第二页正确，Bob 无法看到第三人的会话。
+  const firstInboxPage = await alice.http.request(
+    'GET',
+    '/private-messages/conversations?page_size=1',
+  )
+  assert.equal(firstInboxPage.items[0].user.id, carol.id)
+  assert.equal(firstInboxPage.has_more, true)
+  const secondInboxPage = await alice.http.request(
+    'GET',
+    '/private-messages/conversations?page_size=1&page=2',
+  )
+  assert.equal(secondInboxPage.items[0].user.id, bob.id)
+  assert.equal(secondInboxPage.has_more, false)
+  assert.equal(
+    (await bob.http.request('GET', '/private-messages/conversations')).items
+      .length,
+    1,
+  )
+  console.log(
+    'PASS mailbox sorting, pagination, isolation and delivery outside private chat',
+  )
+
   // Given（前置）：发布临时帖子，并登记帖子清理动作。
   const post = await alice.http.request(
     'POST',
@@ -470,7 +608,12 @@ async function smoke() {
   // When（操作）：通过公开接口为现有帖子写入无有效账号归属的互动。
   // Then（结果）：完整性错误必须返回失败，不能被当作已点赞或已收藏处理。
   await removed.http.request('PUT', `/posts/${post.id}/like`, undefined, 500)
-  await removed.http.request('PUT', `/posts/${post.id}/favorite`, undefined, 500)
+  await removed.http.request(
+    'PUT',
+    `/posts/${post.id}/favorite`,
+    undefined,
+    500,
+  )
   const unchangedPost = await bob.http.request('GET', `/posts/${post.id}`)
   assert.equal(unchangedPost.likes_count, 1)
   assert.equal(unchangedPost.favorites_count, 1)

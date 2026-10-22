@@ -97,6 +97,7 @@ class PrivateMessage(Login):
         sender_id: 发送者的用户标识。
         recipient_id: 接收者的用户标识。
         content: 私聊正文。
+        read_at: 接收方阅读时间，空值表示未读。
         client_message_id: 客户端提供的可选消息标识，在表内唯一。
         created_at: 消息创建时间。
     """
@@ -117,6 +118,7 @@ class PrivateMessage(Login):
         index=True,
     )
     content: str = Column(Text, nullable=False)
+    read_at: datetime | None = Column(DateTime, nullable=True)
     client_message_id: str | None = Column(
         String(_CLIENT_MESSAGE_ID_LEN), unique=True, nullable=True
     )

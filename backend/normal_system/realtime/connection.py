@@ -43,6 +43,7 @@ async def connect(sid: str, environ: dict, auth: dict | None = None):
             return
 
         await sio.save_session(sid, {"user_id": user_id})
+        await sio.enter_room(sid, f"user_{user_id}")
         print(f"User {user_id} connected (sid: {sid})")
 
 
