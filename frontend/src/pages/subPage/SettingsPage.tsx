@@ -5,11 +5,16 @@ import { useStoryMotion } from './useStoryMotion'
 import StoryMessage from './StoryMessage'
 import './SettingsPage.css'
 
-const ASSETS = '/project-story/assets/'
+const ASSETS = `${import.meta.env.BASE_URL}project-story/assets/`
 const REPO = 'https://github.com/Yiyan-Jiang/Drrr-chatRoom-add-AIChat'
 
 /** 展示起源、聊天灵感和项目入口；海报轻微视差不改变阅读顺序。 */
-export default function SettingsPage() {
+export default function SettingsPage({
+  showcase = false,
+}: {
+  /** 独立展示站将业务入口指向仓库，不依赖登录或后端。 */
+  showcase?: boolean
+}) {
   const rootRef = useRef<HTMLElement>(null)
   useStoryMotion(rootRef)
 
@@ -27,8 +32,9 @@ export default function SettingsPage() {
           <a href="#origin">起源</a>
           <a href="#conversation">聊天</a>
         </nav>
-        <Link className="film-nav-enter" to="/home/rooms">
-          进入聊天室 <span aria-hidden="true">↗</span>
+        <Link className="film-nav-enter" to={showcase ? REPO : '/home/rooms'}>
+          {showcase ? '查看项目' : '进入聊天室'}{' '}
+          <span aria-hidden="true">↗</span>
         </Link>
         <span className="film-progress" aria-hidden="true" />
       </header>
@@ -169,9 +175,9 @@ export default function SettingsPage() {
             <br />
             <span>剩下的，交给对话。</span>
           </p>
-          <Link className="story-composer" to="/home/rooms">
+          <Link className="story-composer" to={showcase ? REPO : '/home/rooms'}>
             <span>你的下一句……</span>
-            <b>进入聊天室 ↗</b>
+            <b>{showcase ? '查看项目' : '进入聊天室'} ↗</b>
           </Link>
         </div>
         <a className="story-follow-message" href="#message-journey">
@@ -269,12 +275,17 @@ export default function SettingsPage() {
                 <br />
                 <span>换你来说。</span>
               </h2>
-              <Link className="film-cta" to="/home/rooms">
-                进入聊天室 <span aria-hidden="true">↗</span>
+              <Link className="film-cta" to={showcase ? REPO : '/home/rooms'}>
+                {showcase ? '查看项目' : '进入聊天室'}{' '}
+                <span aria-hidden="true">↗</span>
               </Link>
               <div className="film-continuations">
-                <Link to="/friends">和好友继续 ↗</Link>
-                <Link to="/home/posts">把想法留下 ↗</Link>
+                <Link to={showcase ? `${REPO}#readme` : '/friends'}>
+                  {showcase ? '阅读项目介绍' : '和好友继续'} ↗
+                </Link>
+                <Link to={showcase ? `${REPO}/issues` : '/home/posts'}>
+                  {showcase ? '反馈与建议' : '把想法留下'} ↗
+                </Link>
                 <a href={REPO} target="_blank" rel="noreferrer">
                   探索 GitHub ↗
                 </a>

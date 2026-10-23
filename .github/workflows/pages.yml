@@ -1,0 +1,61 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: 安装 Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: 读取 Pages 配置
+        id: pages
+        uses: actions/configure-pages@v5
+      - name: 安装依赖
+        run: npm --prefix frontend ci
+      - name: 构建独立展示页
+        env:
+          PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+        run: npm --prefix frontend run build:pages
+      - name: 上传静态站点
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist/pages
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 发布到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
