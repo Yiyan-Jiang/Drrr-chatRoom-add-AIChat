@@ -102,7 +102,7 @@ const origin = process.env.STORY_ORIGIN || "http://127.0.0.1:5180";
       });
       await page.locator('.film-nav a[href="#conversation"]').click();
       await page
-        .getByRole("heading", { name: /从作品里的相遇，\s*到真正的聊天室。/ })
+        .getByRole("heading", { name: /在这里，\s*总有人接住\s*你的下一句。/ })
         .waitFor();
       assert.equal(
         await page
@@ -118,63 +118,65 @@ const origin = process.env.STORY_ORIGIN || "http://127.0.0.1:5180";
         await img.evaluate((el) => el.decode());
         assert.equal(await img.evaluate((el) => el.naturalWidth > 0), true);
       }
-      // Act（执行）：用键盘与点击查看消息阶段，展开实现说明。
-      await page.locator(".film-product-caption a").click();
-      await page.getByRole("button", { name: "确认", exact: true }).focus();
+      // Act（执行）：滚动阅读同一消息的三个阶段，通过键盘展开工程说明。
+      await page.locator(".story-follow-message").click();
+      for (const phase of [0, 1, 2]) {
+        await page
+          .locator(".story-passage")
+          .nth(phase)
+          .evaluate((el) =>
+            el.scrollIntoView({ block: "center", behavior: "instant" }),
+          );
+        if (width > 900 && height >= 700 && reducedMotion !== "reduce") {
+          await page.waitForFunction(
+            (value) =>
+              document.querySelector(".story-afterword").dataset.phase ===
+              String(value),
+            phase,
+          );
+        } else {
+          assert.equal(
+            await page
+              .locator(".story-travelling-message")
+              .evaluate((el) => getComputedStyle(el).position),
+            "relative",
+          );
+          for (const status of await page
+            .locator(".story-phase-status span")
+            .all()) {
+            assert.equal(
+              await status.evaluate((el) => getComputedStyle(el).opacity),
+              "1",
+            );
+          }
+        }
+      }
+      await page.locator(".story-engineering summary").focus();
       await page.keyboard.press("Enter");
-      assert.equal(
-        (await page.locator(".film-message-receipt").innerText()).replace(
-          /\s+/g,
-          "",
-        ),
-        "✓已保存·已确认",
-      );
-      await page.getByText("看看背后的实现", { exact: false }).click();
       await page
         .getByText(
-          "数据库事务提交后，Socket.IO 才发送确认与房间广播。确认代表服务器已保存，不代表对方已读。",
+          "数据库事务提交后才发送回执与房间广播。确认表示服务器已保存，不代表对方已读。",
           { exact: true },
         )
         .waitFor();
-      await page.getByRole("button", { name: "重连", exact: true }).click();
+      await page.keyboard.press("Enter");
       assert.equal(
-        (await page.locator(".film-message-receipt").innerText()).replace(
-          /\s+/g,
-          "",
-        ),
-        "✓历史已回补",
-      );
-      assert.equal(
-        await page.locator(".film-engineering").getAttribute("open"),
+        await page.locator(".story-engineering").getAttribute("open"),
         null,
       );
+      await page
+        .locator("#message-journey")
+        .evaluate((el) =>
+          el.scrollIntoView({ block: "start", behavior: "instant" }),
+        );
       await page.screenshot({
-        path: ".tmp/product-" + name + "-journey.png",
+        path: ".tmp/visual-" + name + "-journey.png",
         animations: "disabled",
       });
-      await page.getByRole("button", { name: "发送", exact: true }).click();
-      assert.equal(
-        (await page.locator(".film-message-receipt").innerText()).replace(
-          /\s+/g,
-          "",
-        ),
-        "◌等待回执",
-      );
-      if (width <= 680) {
-        await page.locator(".film-screen-scroll").evaluate((el) => {
-          el.scrollLeft = el.scrollWidth;
-        });
-        assert.ok(
-          await page
-            .locator(".film-screen-scroll")
-            .evaluate((el) => el.scrollLeft > 0),
-          "小屏可横向查看产品界面",
-        );
-      }
       // Assert（断言）：完整介绍无技术代码块和剧集截图，交流入口保持真实目标。
       assert.deepEqual(
         await page
-          .locator(".film-product-heading a, .film-continuations a")
+          .locator(".story-composer, .film-continuations a:not([target])")
           .evaluateAll((links) =>
             links.map((link) => link.getAttribute("href")),
           ),
@@ -188,12 +190,16 @@ const origin = process.env.STORY_ORIGIN || "http://127.0.0.1:5180";
       const images = await page
         .locator(".drrr-film img")
         .evaluateAll((imgs) => imgs.map((img) => img.getAttribute("src")));
-      assert.deepEqual(images, [
+      assert.deepEqual(images.slice(0, 2), [
         "/project-story/assets/drrr-keyvisual.jpg",
         "/project-story/assets/drrr-gathering.png",
-        "/project-story/assets/chat-room.png",
-        "/project-story/assets/avatar-kanra.png",
       ]);
+      assert.equal(await page.locator(".story-message").count(), 5);
+      assert.equal(images.length, 7);
+      assert.equal(
+        images.some((src) => src.includes("chat-room.png")),
+        false,
+      );
       assert.equal(
         await page
           .locator(".drrr-film")
@@ -207,7 +213,7 @@ const origin = process.env.STORY_ORIGIN || "http://127.0.0.1:5180";
       assert.deepEqual(errors, []);
       assert.deepEqual(blocked, []);
       console.log(
-        `PASS ${name}: posters/product decode, message stages and details, keyboard/navigation, real links, no overflow or business requests`,
+        `PASS ${name}: posters/product decode, scroll story and details, keyboard/navigation, real links, no overflow or business requests`,
       );
       await context.close();
     }

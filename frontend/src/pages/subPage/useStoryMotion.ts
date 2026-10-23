@@ -74,6 +74,49 @@ export function useStoryMotion(rootRef: RefObject<HTMLElement | null>) {
                   },
                 },
               )
+              gsap.utils
+                .toArray<HTMLElement>('.story-voice')
+                .forEach((voice, index) => {
+                  gsap.fromTo(
+                    voice,
+                    { y: 35 + index * 8 },
+                    {
+                      y: -18,
+                      ease: 'none',
+                      scrollTrigger: {
+                        trigger: voice,
+                        scroller: root,
+                        start: 'top bottom',
+                        end: 'bottom 20%',
+                        scrub: true,
+                      },
+                    },
+                  )
+                })
+              const afterword =
+                root.querySelector<HTMLElement>('.story-afterword')!
+              const passages = gsap.utils.toArray<HTMLElement>('.story-passage')
+              ScrollTrigger.create({
+                trigger: '.story-passages',
+                scroller: root,
+                start: 'top center',
+                end: 'bottom center',
+                onUpdate: () => {
+                  const middle =
+                    root.getBoundingClientRect().top + root.clientHeight / 2
+                  const active = passages.reduce(
+                    (index, passage, next) =>
+                      passage.getBoundingClientRect().top <= middle
+                        ? next
+                        : index,
+                    0,
+                  )
+                  afterword.dataset.phase = String(active)
+                },
+              })
+              return () => {
+                afterword.dataset.phase = '0'
+              }
             }, root)
             return () => context.revert()
           },
