@@ -1,6 +1,8 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -8,6 +10,8 @@ html, body, #root {
 
 html {
   scroll-behavior: smooth;
+  /* 滚动到边界时，浏览器画布与应用的黑色背景保持一致。 */
+  background: #000;
 }
 
 * {
