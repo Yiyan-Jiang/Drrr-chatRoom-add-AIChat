@@ -1,48 +1,17 @@
 /** 以官方海报介绍 DOLLARS 的作品灵感与项目中的交流方式。 */
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useStoryMotion } from './useStoryMotion'
+import StoryMessage from './StoryMessage'
 import './SettingsPage.css'
 
 const ASSETS = '/project-story/assets/'
 const REPO = 'https://github.com/Yiyan-Jiang/Drrr-chatRoom-add-AIChat'
 
-/** 消息演示内容依据真实发送回执与重连回补实现，不发起业务请求。 */
-const MESSAGE_STEPS = [
-  {
-    label: '发送',
-    title: '先让问候出现在眼前。',
-    description:
-      '按下发送，消息立即出现在自己的对话中。此时还在等待服务器确认。',
-    status: '等待回执',
-    detail:
-      '界面先显示待发送消息，并用客户端消息编号关联后续回执；10 秒未收到回执会标记失败。',
-  },
-  {
-    label: '确认',
-    title: '被保存，才算有了回应。',
-    description:
-      '服务器保存消息后，向发送者返回确认，再把消息广播给房间中的人。',
-    status: '已保存 · 已确认',
-    detail:
-      '数据库事务提交后，Socket.IO 才发送确认与房间广播。确认代表服务器已保存，不代表对方已读。',
-  },
-  {
-    label: '重连',
-    title: '短暂离线，对话还能接上。',
-    description: '重新连上房间后，读取历史消息，补回断开期间错过的内容。',
-    status: '历史已回补',
-    detail:
-      '客户端重入房间，分页读取历史并合并已有消息，让重复记录不会在界面出现两次。',
-  },
-]
-
 /** 展示起源、聊天灵感和项目入口；海报轻微视差不改变阅读顺序。 */
 export default function SettingsPage() {
   const rootRef = useRef<HTMLElement>(null)
   useStoryMotion(rootRef)
-  const [messageStep, setMessageStep] = useState(0)
-  const currentStep = MESSAGE_STEPS[messageStep]
 
   return (
     <main
@@ -155,161 +124,163 @@ export default function SettingsPage() {
       </section>
 
       <section
-        className="film-product"
+        className="story-conversation"
         id="conversation"
         aria-labelledby="conversation-title"
       >
-        <div className="film-product-heading">
-          <h2 id="conversation-title">
-            从作品里的相遇，
-            <br />
-            <span>到真正的聊天室。</span>
-          </h2>
-          <div>
-            <p>
-              选一间房，带上自己的头像。
-              <br />
-              有人说起今天，有人接住下一句。
-            </p>
-            <Link to="/home/rooms">
-              找一间房坐坐 <span aria-hidden="true">↗</span>
-            </Link>
+        <div className="story-night-word" aria-hidden="true">
+          晚安
+        </div>
+        <h2 id="conversation-title">
+          在这里，
+          <br />
+          总有人接住
+          <br />
+          <span>你的下一句。</span>
+        </h2>
+        <div
+          className="story-voices"
+          aria-label="使用真实聊天样式编排的示例对话"
+        >
+          <div className="story-voice story-voice-one">
+            <StoryMessage avatar="setton" name="夜行者">
+              这个点，还有人醒着吗？
+            </StoryMessage>
+          </div>
+          <div className="story-voice story-voice-two">
+            <StoryMessage avatar="kanra" name="折原" reverse>
+              在。刚从城市的另一端回来。
+            </StoryMessage>
+          </div>
+          <div className="story-voice story-voice-three">
+            <StoryMessage avatar="zawa" name="路过的人">
+              那就坐一会儿，说说今天吧。
+            </StoryMessage>
+          </div>
+          <div className="story-voice story-voice-four">
+            <StoryMessage avatar="kanra" name="折原" reverse>
+              那么，就从一句「晚上好」开始。
+            </StoryMessage>
           </div>
         </div>
-        <figure className="film-product-screen">
-          <div className="film-screen-bar">
-            <span>DOLLARS / 夜行电台</span>
-            <span>聊天室实景</span>
-          </div>
-          <div
-            className="film-screen-scroll"
-            tabIndex={0}
-            role="region"
-            aria-label="真实聊天室截图，小屏可横向滚动查看"
-          >
-            <img
-              src={`${ASSETS}chat-room.png`}
-              alt="真实聊天室：夜行电台房间的输入框、头像与四条示例对话，最后一句是那么，就从一句晚上好开始。"
-              width="1400"
-              height="840"
-              loading="lazy"
-            />
-          </div>
-          <figcaption>
-            独立昵称与头像、房间内的实时对话，都在同一个界面里。
-            <span>演示对话</span>
-          </figcaption>
-        </figure>
-        <div className="film-product-caption">
+        <div className="story-conversation-bottom">
           <p>
-            熟悉的头像。<span>自己的声音。</span>
+            一个昵称。一枚头像。
+            <br />
+            <span>剩下的，交给对话。</span>
           </p>
-          <a href="#message-journey">
-            一句话发出之后，发生了什么？ <span aria-hidden="true">↓</span>
-          </a>
+          <Link className="story-composer" to="/home/rooms">
+            <span>你的下一句……</span>
+            <b>进入聊天室 ↗</b>
+          </Link>
         </div>
+        <a className="story-follow-message" href="#message-journey">
+          跟随这一句问候 <span aria-hidden="true">↓</span>
+        </a>
       </section>
 
       <section
-        className="film-journey"
+        className="story-afterword"
         id="message-journey"
         aria-labelledby="journey-title"
+        data-phase="0"
       >
-        <div className="film-journey-heading">
+        <div className="story-afterword-heading">
           <h2 id="journey-title">
-            不止让消息出现。
+            一句话，
             <br />
-            <span>也让对话留下来。</span>
+            <span>不止于此刻。</span>
           </h2>
-          <p>
-            从屏幕上的一句「晚上好」，
-            <br />
-            看看这间聊天室如何接住它。
-          </p>
+          <p>从发出，到再次相见。</p>
         </div>
-        <div className="film-journey-layout">
-          <div className="film-journey-demo" data-step={messageStep}>
-            <div className="film-journey-demo-heading">
-              <span>夜行电台</span>
-              <span>消息流转演示</span>
+        <div className="story-message-route">
+          <div className="story-travelling-message">
+            <span className="story-message-echo" aria-hidden="true">
+              晚上好。
+            </span>
+            <StoryMessage avatar="kanra" name="折原">
+              晚上好。
+            </StoryMessage>
+            <div className="story-phase-status" aria-label="消息流转示意">
+              <span>等待确认</span>
+              <span>已保存 · 已确认</span>
+              <span>再次连接，仍在这里</span>
             </div>
-            <div className="film-journey-message">
-              <img
-                src={`${ASSETS}avatar-kanra.png`}
-                alt=""
-                width="48"
-                height="48"
-              />
+            <span className="story-local-note">消息演示</span>
+          </div>
+          <div className="story-passages">
+            <article className="story-passage" data-phase="0">
+              <h3>
+                先出现在，
+                <br />
+                <span>你的眼前。</span>
+              </h3>
+              <p>
+                按下发送，问候先出现在自己的屏幕。
+                <br />
+                等待另一端传回确认。
+              </p>
+            </article>
+            <article className="story-passage" data-phase="1">
+              <h3>
+                被保存，
+                <br />
+                <span>再传向房间。</span>
+              </h3>
+              <p>
+                服务器保存消息后返回确认，
+                <br />
+                再把这句话送进房间里的对话。
+              </p>
+            </article>
+            <article className="story-passage" data-phase="2">
+              <h3>
+                短暂离开，
+                <br />
+                <span>也能接着聊。</span>
+              </h3>
+              <p>
+                重新连接时，从历史中补回错过的消息。
+                <br />
+                把对话接回离开的地方。
+              </p>
+            </article>
+            <details className="story-engineering">
+              <summary>
+                这句问候背后的设计 <span aria-hidden="true">＋</span>
+              </summary>
               <div>
-                <span>折原</span>
-                <p>那么，就从一句「晚上好」开始。</p>
+                <p>
+                  界面先显示待发送消息，用客户端编号关联回执；10
+                  秒未收到回执会标记失败。
+                </p>
+                <p>
+                  数据库事务提交后才发送回执与房间广播。确认表示服务器已保存，不代表对方已读。
+                </p>
+                <p>
+                  重连后重新加入房间，分页读取历史并合并已有消息。这里展示的是本地叙事，不会实际发送消息。
+                </p>
+              </div>
+            </details>
+            <div className="story-reply" id="enter">
+              <p>有人说了「晚上好」。</p>
+              <h2 id="final-title">
+                下一句，
+                <br />
+                <span>换你来说。</span>
+              </h2>
+              <Link className="film-cta" to="/home/rooms">
+                进入聊天室 <span aria-hidden="true">↗</span>
+              </Link>
+              <div className="film-continuations">
+                <Link to="/friends">和好友继续 ↗</Link>
+                <Link to="/home/posts">把想法留下 ↗</Link>
+                <a href={REPO} target="_blank" rel="noreferrer">
+                  探索 GitHub ↗
+                </a>
               </div>
             </div>
-            <div className="film-message-receipt" aria-live="polite">
-              <span aria-hidden="true">{messageStep === 0 ? '◌' : '✓'}</span>
-              {currentStep.status}
-            </div>
-            <div className="film-journey-track" aria-hidden="true">
-              <span className="is-active">你的屏幕</span>
-              <i />
-              <span className={messageStep > 0 ? 'is-active' : ''}>
-                保存与确认
-              </span>
-              <i />
-              <span className={messageStep > 1 ? 'is-active' : ''}>
-                重连后的历史
-              </span>
-            </div>
           </div>
-          <div className="film-journey-explanation">
-            <div className="film-step-controls" aria-label="查看消息流转阶段">
-              {MESSAGE_STEPS.map((step, index) => (
-                <button
-                  key={step.label}
-                  type="button"
-                  aria-pressed={messageStep === index}
-                  aria-controls="message-step-content"
-                  onClick={() => setMessageStep(index)}
-                >
-                  <span aria-hidden="true">0{index + 1}</span>
-                  {step.label}
-                </button>
-              ))}
-            </div>
-            <div id="message-step-content" aria-live="polite">
-              <h3>{currentStep.title}</h3>
-              <p>{currentStep.description}</p>
-            </div>
-            <details className="film-engineering" key={messageStep}>
-              <summary>
-                看看背后的实现 <span aria-hidden="true">＋</span>
-              </summary>
-              <p>{currentStep.detail}</p>
-            </details>
-          </div>
-        </div>
-      </section>
-
-      <section
-        className="film-invitation"
-        id="enter"
-        aria-labelledby="final-title"
-      >
-        <p>「那么，就从一句晚上好开始。」</p>
-        <h2 id="final-title">
-          下一句，<span>换你来说。</span>
-        </h2>
-        <div className="film-invitation-actions">
-          <Link className="film-cta" to="/home/rooms">
-            进入聊天室 <span aria-hidden="true">↗</span>
-          </Link>
-          <a href={REPO} target="_blank" rel="noreferrer">
-            探索 GitHub ↗
-          </a>
-        </div>
-        <div className="film-continuations">
-          <Link to="/friends">聊得来，就加个好友 ↗</Link>
-          <Link to="/home/posts">想慢慢说，就写成帖子 ↗</Link>
         </div>
       </section>
       <footer className="film-footer">
