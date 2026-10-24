@@ -1,9 +1,9 @@
-/** 为海报提供轻微错速视差，不改变起源介绍与聊天内容的阅读顺序。 */
+/** 为设定页提供滚动驱动的入场动画、视差和时间线联动。 */
 import { useEffect } from 'react'
 import type { RefObject } from 'react'
 
 /**
- * 创建可撤销的海报动效；移动端、减少动态模式保持静态阅读。
+ * 创建可撤销的页面动效；移动端、减少动态模式保持静态阅读。
  * @param rootRef - 项目介绍的独立滚动容器。
  */
 export function useStoryMotion(rootRef: RefObject<HTMLElement | null>) {
@@ -17,21 +17,40 @@ export function useStoryMotion(rootRef: RefObject<HTMLElement | null>) {
         gsap.registerPlugin(ScrollTrigger)
         const media = gsap.matchMedia()
         cleanup = () => media.revert()
+
+        // 全局入场动画：所有 .anim-fade-up 元素
+        media.add('(prefers-reduced-motion: no-preference)', () => {
+          const context = gsap.context(() => {
+            gsap.utils
+              .toArray<HTMLElement>('.anim-fade-up')
+              .forEach((el) => {
+                gsap.fromTo(
+                  el,
+                  { y: 45, opacity: 0 },
+                  {
+                    y: 0,
+                    opacity: 1,
+                    duration: 0.9,
+                    ease: 'power3.out',
+                    scrollTrigger: {
+                      trigger: el,
+                      scroller: root,
+                      start: 'top 88%',
+                      once: true,
+                    },
+                  },
+                )
+              })
+          }, root)
+          return () => context.revert()
+        })
+
+        // 桌面端增强动效
         media.add(
           '(min-width: 901px) and (min-height: 700px) and (prefers-reduced-motion: no-preference)',
           () => {
             const context = gsap.context(() => {
-              gsap.to('.film-progress', {
-                scaleX: 1,
-                ease: 'none',
-                scrollTrigger: {
-                  scroller: root,
-                  trigger: root,
-                  start: 0,
-                  end: () => root.scrollHeight - root.clientHeight,
-                  scrub: true,
-                },
-              })
+              // 海报视差
               gsap.fromTo(
                 '.film-hero-poster',
                 { y: 0, rotation: 5 },
@@ -48,6 +67,8 @@ export function useStoryMotion(rootRef: RefObject<HTMLElement | null>) {
                   },
                 },
               )
+
+              // 背景大字视差
               gsap.to('.film-opening-outline', {
                 y: -100,
                 ease: 'none',
@@ -59,6 +80,8 @@ export function useStoryMotion(rootRef: RefObject<HTMLElement | null>) {
                   scrub: true,
                 },
               })
+
+              // 群像海报视差
               gsap.fromTo(
                 '.film-gathering img',
                 { y: 45 },
@@ -74,14 +97,16 @@ export function useStoryMotion(rootRef: RefObject<HTMLElement | null>) {
                   },
                 },
               )
+
+              // 聊天气泡序列：依次错速浮入
               gsap.utils
                 .toArray<HTMLElement>('.story-voice')
                 .forEach((voice, index) => {
                   gsap.fromTo(
                     voice,
-                    { y: 35 + index * 8 },
+                    { y: 40 + index * 12 },
                     {
-                      y: -18,
+                      y: -15,
                       ease: 'none',
                       scrollTrigger: {
                         trigger: voice,
@@ -93,29 +118,53 @@ export function useStoryMotion(rootRef: RefObject<HTMLElement | null>) {
                     },
                   )
                 })
-              const afterword =
-                root.querySelector<HTMLElement>('.story-afterword')!
-              const passages = gsap.utils.toArray<HTMLElement>('.story-passage')
-              ScrollTrigger.create({
-                trigger: '.story-passages',
-                scroller: root,
-                start: 'top center',
-                end: 'bottom center',
-                onUpdate: () => {
-                  const middle =
-                    root.getBoundingClientRect().top + root.clientHeight / 2
-                  const active = passages.reduce(
-                    (index, passage, next) =>
-                      passage.getBoundingClientRect().top <= middle
-                        ? next
-                        : index,
-                    0,
-                  )
-                  afterword.dataset.phase = String(active)
-                },
-              })
-              return () => {
-                afterword.dataset.phase = '0'
+
+              // 产品截图视差
+              const productFrame = root.querySelector('.story-product-frame')
+              if (productFrame) {
+                gsap.fromTo(
+                  productFrame,
+                  { y: 60 },
+                  {
+                    y: -30,
+                    ease: 'none',
+                    scrollTrigger: {
+                      trigger: productFrame,
+                      scroller: root,
+                      start: 'top bottom',
+                      end: 'bottom top',
+                      scrub: true,
+                    },
+                  },
+                )
+              }
+
+              // 时间线节点联动：根据滚动位置切换 data-phase
+              const journey =
+                root.querySelector<HTMLElement>('.story-journey')!
+              const timelineNodes = gsap.utils.toArray<HTMLElement>(
+                '.story-timeline-node',
+              )
+              if (journey && timelineNodes.length) {
+                ScrollTrigger.create({
+                  trigger: '.story-timeline-track',
+                  scroller: root,
+                  start: 'top center',
+                  end: 'bottom center',
+                  onUpdate: () => {
+                    const middle =
+                      root.getBoundingClientRect().top +
+                      root.clientHeight / 2
+                    const active = timelineNodes.reduce(
+                      (index, node, next) =>
+                        node.getBoundingClientRect().top <= middle
+                          ? next
+                          : index,
+                      0,
+                    )
+                    journey.dataset.phase = String(active)
+                  },
+                })
               }
             }, root)
             return () => context.revert()
@@ -126,7 +175,7 @@ export function useStoryMotion(rootRef: RefObject<HTMLElement | null>) {
       .catch((error: unknown) => {
         if (disposed) return
         root.dataset.motion = 'unavailable'
-        console.warn('海报动效加载失败，保留静态页面。', error)
+        console.warn('页面动效加载失败，保留静态页面。', error)
       })
     return () => {
       disposed = true
