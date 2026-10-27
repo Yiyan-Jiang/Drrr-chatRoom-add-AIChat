@@ -333,6 +333,7 @@ async function smoke() {
     'PASS room permissions, two-client group delivery, persistence and retry',
   )
 
+
   // Given（前置）：先确认非好友无法加入私聊，再提交好友申请。
   const deniedPrivateChat = waitForEvent(aliceSocket, 'private_chat_error')
   aliceSocket.emit('join_private_chat', { friend_id: bob.id })
@@ -509,6 +510,61 @@ async function smoke() {
 
   // Arrange（准备）：第三个账号只与 Alice 建立会话，用于验证分页和隔离。
   const carol = await register('c')
+  // Given（前置）：Carol 从未加入群聊，另建仅通过门禁但未登录的会话。
+  const gateOnly = client()
+  await gateOnly.passGate()
+  // When（操作）：分别以匿名、仅门禁和登录身份访问用户、房间及消息查询入口。
+  await anonymous.request('GET', '/users/count', undefined, 401)
+  const userCount = await gateOnly.request('GET', '/users/count')
+  assert.ok(Number.isInteger(userCount.total) && userCount.total >= 3)
+  const queryRoutes = [
+    `/users/${alice.id}`,
+    `/users/username/${alice.username}`,
+    '/rooms/',
+    '/rooms/mine',
+    '/rooms/viewers/count',
+    `/rooms/name/${room.name}`,
+    `/rooms/${room.id}`,
+    `/messages/room/${room.id}`,
+    `/messages/room/${room.id}/page`,
+    `/messages/${roomMessage.id}`,
+  ]
+  for (const route of queryRoutes) {
+    await anonymous.request('GET', route, undefined, 401)
+    await gateOnly.request('GET', route, undefined, 401)
+  }
+  // Then（结果）：登录用户无需加入房间即可读取公开资料和历史，响应保留业务内容。
+  assert.equal((await carol.http.request('GET', queryRoutes[0])).id, alice.id)
+  assert.equal((await carol.http.request('GET', queryRoutes[1])).id, alice.id)
+  assert.ok(Array.isArray(await carol.http.request('GET', '/rooms/')))
+  assert.deepEqual(await carol.http.request('GET', '/rooms/mine'), [])
+  assert.ok(
+    Number.isInteger(
+      (await carol.http.request('GET', '/rooms/viewers/count')).total,
+    ),
+  )
+  assert.equal(
+    (await carol.http.request('GET', `/rooms/name/${room.name}`)).id,
+    room.id,
+  )
+  const publicRoom = await carol.http.request('GET', `/rooms/${room.id}`)
+  assert.equal(publicRoom.id, room.id)
+  assert.ok(publicRoom.messages.some((item) => item.id === roomMessage.id))
+  const publicHistory = await carol.http.request(
+    'GET',
+    `/messages/room/${room.id}`,
+  )
+  assert.ok(publicHistory.some((item) => item.id === roomMessage.id))
+  const publicPage = await carol.http.request(
+    'GET',
+    `/messages/room/${room.id}/page`,
+  )
+  assert.ok(publicPage.items.some((item) => item.id === roomMessage.id))
+  assert.equal(
+    (await carol.http.request('GET', `/messages/${roomMessage.id}`)).content,
+    roomPayload.content,
+  )
+  console.log('PASS query authentication, gate-only count and public room history')
   assert.deepEqual(
     (await carol.http.request('GET', '/private-messages/conversations')).items,
     [],

@@ -79,7 +79,11 @@ async def create_new_room(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.get("/", response_model=List[RoomInDB])
+@router.get(
+    "/",
+    response_model=List[RoomInDB],
+    dependencies=[Depends(get_current_user_id)],
+)
 async def list_rooms(
     db: AsyncSession = Depends(get_db),
     skip: int = Query(0, ge=0, description="跳过多少条"),
@@ -100,13 +104,17 @@ async def list_my_rooms(
     return [await _to_room_response(db, room) for room in rooms]
 
 
-@router.get("/viewers/count")
+@router.get("/viewers/count", dependencies=[Depends(get_current_user_id)])
 async def get_room_viewer_count():
     """返回当前进程内仍留在房间中的去重在线用户总数。"""
     return {"total": room_presence.total_viewers()}
 
 
-@router.get("/name/{name}", response_model=RoomInDB)
+@router.get(
+    "/name/{name}",
+    response_model=RoomInDB,
+    dependencies=[Depends(get_current_user_id)],
+)
 async def get_room_by_name_endpoint(name: str, db: AsyncSession = Depends(get_db)):
     """按名称读取房间展示资料，不存在时返回 HTTP 404。"""
     room = await get_room_by_name(db, name)
@@ -133,7 +141,11 @@ async def get_room_by_name_endpoint(name: str, db: AsyncSession = Depends(get_db
     )
 
 
-@router.get("/{room_id:int}", response_model=RoomWithMessages)
+@router.get(
+    "/{room_id:int}",
+    response_model=RoomWithMessages,
+    dependencies=[Depends(get_current_user_id)],
+)
 async def get_room_detail(room_id: int, db: AsyncSession = Depends(get_db)):
     """返回房间资料和最近消息，不存在时返回 HTTP 404。"""
     room = await get_room_by_id(db, room_id)

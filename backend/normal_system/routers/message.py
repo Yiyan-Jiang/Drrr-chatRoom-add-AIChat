@@ -31,7 +31,11 @@ async def create_new_message(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/room/{room_id}", response_model=List[MessageInDB])
+@router.get(
+    "/room/{room_id}",
+    response_model=List[MessageInDB],
+    dependencies=[Depends(get_current_user_id)],
+)
 async def get_messages_in_room(
     room_id: int,
     db: AsyncSession = Depends(get_db),
@@ -45,7 +49,11 @@ async def get_messages_in_room(
     return items
 
 
-@router.get("/room/{room_id}/page", response_model=PaginatedMessagesResponse)
+@router.get(
+    "/room/{room_id}/page",
+    response_model=PaginatedMessagesResponse,
+    dependencies=[Depends(get_current_user_id)],
+)
 async def get_messages_page(
     room_id: int,
     db: AsyncSession = Depends(get_db),
@@ -63,7 +71,11 @@ async def get_messages_page(
     )
 
 
-@router.get("/{message_id}", response_model=MessageInDB)
+@router.get(
+    "/{message_id}",
+    response_model=MessageInDB,
+    dependencies=[Depends(get_current_user_id)],
+)
 async def get_single_message(message_id: int, db: AsyncSession = Depends(get_db)):
     """按 ID 返回单条群聊消息，不存在时返回 HTTP 404。"""
     message = await get_message_by_id(db, message_id)

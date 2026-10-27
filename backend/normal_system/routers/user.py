@@ -28,7 +28,11 @@ from normal_system.services.user import (
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.get("/count", response_model=UserCountResponse)
+@router.get(
+    "/count",
+    response_model=UserCountResponse,
+    dependencies=[Depends(require_gate_passed)],
+)
 async def get_count(db: AsyncSession = Depends(get_db)):
     """返回已注册账号总数。"""
     count = await get_user_count(db)
@@ -80,7 +84,11 @@ async def update_current_user_profile(
     return updated_user
 
 
-@router.get("/username/{username}", response_model=UserPublic)
+@router.get(
+    "/username/{username}",
+    response_model=UserPublic,
+    dependencies=[Depends(get_current_user_id)],
+)
 async def read_user_by_username(username: str, db: AsyncSession = Depends(get_db)):
     """按用户名返回公开资料，不存在时返回 HTTP 404。"""
     user = await get_user_by_username(db, username)
@@ -91,7 +99,11 @@ async def read_user_by_username(username: str, db: AsyncSession = Depends(get_db
     return user
 
 
-@router.get("/{user_id}", response_model=UserPublic)
+@router.get(
+    "/{user_id}",
+    response_model=UserPublic,
+    dependencies=[Depends(get_current_user_id)],
+)
 async def read_user(user_id: int, db: AsyncSession = Depends(get_db)):
     """按用户 ID 返回公开资料，不存在时返回 HTTP 404。"""
     user = await get_user_by_id(db, user_id)
