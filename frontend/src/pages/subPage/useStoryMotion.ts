@@ -21,26 +21,24 @@ export function useStoryMotion(rootRef: RefObject<HTMLElement | null>) {
         // 全局入场动画：所有 .anim-fade-up 元素
         media.add('(prefers-reduced-motion: no-preference)', () => {
           const context = gsap.context(() => {
-            gsap.utils
-              .toArray<HTMLElement>('.anim-fade-up')
-              .forEach((el) => {
-                gsap.fromTo(
-                  el,
-                  { y: 45, opacity: 0 },
-                  {
-                    y: 0,
-                    opacity: 1,
-                    duration: 0.9,
-                    ease: 'power3.out',
-                    scrollTrigger: {
-                      trigger: el,
-                      scroller: root,
-                      start: 'top 88%',
-                      once: true,
-                    },
+            gsap.utils.toArray<HTMLElement>('.anim-fade-up').forEach((el) => {
+              gsap.fromTo(
+                el,
+                { y: 45, opacity: 0 },
+                {
+                  y: 0,
+                  opacity: 1,
+                  duration: 0.9,
+                  ease: 'power3.out',
+                  scrollTrigger: {
+                    trigger: el,
+                    scroller: root,
+                    start: 'top 88%',
+                    once: true,
                   },
-                )
-              })
+                },
+              )
+            })
           }, root)
           return () => context.revert()
         })
@@ -139,32 +137,32 @@ export function useStoryMotion(rootRef: RefObject<HTMLElement | null>) {
                 )
               }
 
-              // 时间线节点联动：根据滚动位置切换 data-phase
-              const journey =
-                root.querySelector<HTMLElement>('.story-journey')!
-              const timelineNodes = gsap.utils.toArray<HTMLElement>(
-                '.story-timeline-node',
-              )
-              if (journey && timelineNodes.length) {
+              // 消息阶段联动：根据段落阅读位置切换提示
+              const afterword =
+                root.querySelector<HTMLElement>('.story-afterword')!
+              const passages = gsap.utils.toArray<HTMLElement>('.story-passage')
+              if (afterword && passages.length) {
                 ScrollTrigger.create({
-                  trigger: '.story-timeline-track',
+                  trigger: '.story-passages',
                   scroller: root,
                   start: 'top center',
                   end: 'bottom center',
                   onUpdate: () => {
                     const middle =
-                      root.getBoundingClientRect().top +
-                      root.clientHeight / 2
-                    const active = timelineNodes.reduce(
-                      (index, node, next) =>
-                        node.getBoundingClientRect().top <= middle
+                      root.getBoundingClientRect().top + root.clientHeight / 2
+                    const active = passages.reduce(
+                      (index, passage, next) =>
+                        passage.getBoundingClientRect().top <= middle
                           ? next
                           : index,
                       0,
                     )
-                    journey.dataset.phase = String(active)
+                    afterword.dataset.phase = String(active)
                   },
                 })
+                return () => {
+                  afterword.dataset.phase = '0'
+                }
               }
             }, root)
             return () => context.revert()
