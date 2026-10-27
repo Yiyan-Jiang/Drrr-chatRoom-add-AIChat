@@ -254,3 +254,31 @@ docs: 完善项目首页与启动说明
 [报告问题](https://github.com/Yiyan-Jiang/Drrr-chatRoom-add-AIChat/issues) · [查看源码](https://github.com/Yiyan-Jiang/Drrr-chatRoom-add-AIChat) · [回到顶部](#drrr-chatroom-add-aichat)
 
 </div>
+
+## GitHub Pages 项目展示站
+
+展示站复用应用的设定页，但不加载登录、业务路由或后端连接；展示版的聊天入口指向仓库，应用内的入口保持原行为。
+
+### 本地构建与预览
+
+```bash
+npm --prefix frontend ci
+npm --prefix frontend run build:pages
+npm --prefix frontend run preview:pages -- --host 127.0.0.1
+```
+
+预览地址为 `http://127.0.0.1:4173/Drrr-chatRoom-add-AIChat/`。产物只写入根目录 `dist/pages/`，该目录已被 Git 忽略。`PAGES_BASE_PATH` 可覆盖部署子路径；工作流从 GitHub Pages 配置读取实际路径。
+
+### 首次发布
+
+1. 将本次配置提交并推送到 `main`。
+2. 在仓库 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**。
+3. 在 **Actions → GitHub Pages → Run workflow** 手动运行一次，分支选择 `main`。如果首次推送时尚未启用 Pages，配置步骤可能失败；启用后重新运行即可。
+4. 部署成功后，从该次运行的 `github-pages` 环境复制真实站点地址。
+5. 在仓库首页右侧 **About → 齿轮 → Website** 填入该地址。默认项目站点地址为 `https://Yiyan-Jiang.github.io/Drrr-chatRoom-add-AIChat/`，以部署结果为准。
+
+之后 `main` 上的前端或 Pages 工作流发生变化时会自动发布。工作流仅上传 `dist/pages/`，不会发布后端、数据库或环境配置。此展示站不提供在线聊天服务。
+
+### 离线端到端验证
+
+先构建，再运行 `node tests/pages-e2e.cjs`。脚本使用 Playwright，支持通过 `PLAYWRIGHT_MODULE` 指定已有模块路径、通过 `E2E_BROWSER_PATH` 指定本机 Chromium/Edge 路径。测试启动本机静态服务器，检查桌面与手机尺寸下的资源、导航、刷新、无 JavaScript 内容和业务请求隔离，不接入外部业务服务。
