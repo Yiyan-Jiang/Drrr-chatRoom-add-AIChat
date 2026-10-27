@@ -85,8 +85,17 @@ async def get_single_message(message_id: int, db: AsyncSession = Depends(get_db)
 
 
 @router.delete("/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_existing_message(message_id: int, db: AsyncSession = Depends(get_db)):
-    """删除指定群聊消息，不存在时返回 HTTP 404。"""
-    success = await delete_message(db, message_id)
+async def delete_existing_message(
+    message_id: int,
+    user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """由作者或所属房主删除普通消息，拒绝匿名、越权和系统消息删除。"""
+    try:
+        success = await delete_message(db, message_id, requester_id=user_id)
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
     if not success:
         raise HTTPException(status_code=404, detail="Message not found")

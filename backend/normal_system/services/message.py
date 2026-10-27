@@ -76,11 +76,31 @@ async def create_message(
         raise
 
 
-async def delete_message(db: AsyncSession, message_id: int) -> bool:
-    """删除已有群聊消息并提交事务，不存在时返回 False。"""
+async def delete_message(db: AsyncSession, message_id: int, requester_id: int) -> bool:
+    """允许作者或所属房主删除普通消息，不存在时返回 False。
+
+    Args:
+        db: 查询消息与房间并提交删除事务的会话。
+        message_id: 待删除消息的标识。
+        requester_id: 已通过登录校验的操作者标识。
+
+    Returns:
+        消息删除成功时为 True，不存在时为 False。
+
+    Raises:
+        PermissionError: 消息不是普通消息，或操作者既不是作者也不是所属房主。
+    """
     db_message = await get_message_by_id(db, message_id)
     if not db_message:
         return False
+    if db_message.message_type != "user":
+        raise PermissionError("System messages cannot be deleted")
+    if db_message.user_id != requester_id:
+        room = await get_room_by_id(db, db_message.room_id)
+        if room.owner_id != requester_id:
+            raise PermissionError(
+                "Only the author or room owner can delete this message"
+            )
     await remove_message(db, db_message)
     await db.commit()
     return True

@@ -333,6 +333,61 @@ async function smoke() {
     'PASS room permissions, two-client group delivery, persistence and retry',
   )
 
+  // Given（前置）：准备普通消息、无关用户和另一房间，所有资源沿用 finally 清理。
+  const unrelated = await register('unrelated')
+  const ownMessage = await bob.http.request('POST', '/messages/', {
+    room_id: room.id,
+    content: `permission_own_${runId}`,
+  }, 201)
+  // When（操作）：匿名和无关用户尝试删除，作者随后删除自己的普通消息。
+  await anonymous.request('DELETE', `/messages/${ownMessage.id}`, undefined, 401)
+  await unrelated.http.request('DELETE', `/messages/${ownMessage.id}`, undefined, 403)
+  const otherRoom = await unrelated.http.request('POST', '/rooms/', {
+    name: `p${runId.slice(0, 7)}`,
+  }, 201)
+  cleanup.push({
+    name: `room ${otherRoom.id}`,
+    run: async () => {
+      await unrelated.http.request('DELETE', `/rooms/${otherRoom.id}`, undefined, 204)
+      await unrelated.http.request('GET', `/rooms/${otherRoom.id}`, undefined, 404)
+    },
+  })
+  await unrelated.http.request('DELETE', `/messages/${ownMessage.id}`, undefined, 403)
+  assert.equal((await alice.http.request('GET', `/messages/${ownMessage.id}`)).content, ownMessage.content)
+  await bob.http.request('DELETE', `/messages/${ownMessage.id}`, undefined, 204)
+  await alice.http.request('GET', `/messages/${ownMessage.id}`, undefined, 404)
+  await bob.http.request('DELETE', `/messages/${ownMessage.id}`, undefined, 404)
+
+  // Then（结果）：所属房主可管理他人普通消息，作者和房主都不能删除系统消息。
+  const moderatedMessage = await bob.http.request('POST', '/messages/', {
+    room_id: room.id,
+    content: `permission_owner_${runId}`,
+  }, 201)
+  await alice.http.request('DELETE', `/messages/${moderatedMessage.id}`, undefined, 204)
+  await bob.http.request('GET', `/messages/${moderatedMessage.id}`, undefined, 404)
+  const systemHistory = await alice.http.request('GET', `/messages/room/${room.id}/page?limit=30`)
+  const systemMessage = systemHistory.items.find((item) => item.message_type === 'system' && item.user_id === bob.id)
+  assert.ok(systemMessage, '真实入房事件必须生成系统消息')
+  await bob.http.request('DELETE', `/messages/${systemMessage.id}`, undefined, 403)
+  await alice.http.request('DELETE', `/messages/${systemMessage.id}`, undefined, 403)
+  assert.equal((await alice.http.request('GET', `/messages/${systemMessage.id}`)).message_type, 'system')
+
+  // Given（前置）：通过真实注销流程将普通消息的作者关联置空。
+  const departed = await register('departed')
+  const orphanMessage = await departed.http.request('POST', '/messages/', {
+    room_id: room.id,
+    content: `permission_orphan_${runId}`,
+  }, 201)
+  await departed.http.request('DELETE', `/users/${departed.id}`, undefined, 204)
+  cleanup.pop()
+  // When（操作）：无关用户与所属房主分别尝试管理注销作者留下的消息。
+  assert.equal((await alice.http.request('GET', `/messages/${orphanMessage.id}`)).user_id, null)
+  await unrelated.http.request('DELETE', `/messages/${orphanMessage.id}`, undefined, 403)
+  await alice.http.request('DELETE', `/messages/${orphanMessage.id}`, undefined, 204)
+  // Then（结果）：注销作者的普通消息由所属房主删除，删除结果可读回确认。
+  await alice.http.request('GET', `/messages/${orphanMessage.id}`, undefined, 404)
+  console.log('PASS message author, owning-room moderation, system protection and deleted-author scope')
+
 
   // Given（前置）：先确认非好友无法加入私聊，再提交好友申请。
   const deniedPrivateChat = waitForEvent(aliceSocket, 'private_chat_error')
