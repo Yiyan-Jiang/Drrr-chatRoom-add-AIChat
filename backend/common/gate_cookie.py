@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
 import os
+from datetime import datetime, timedelta, timezone
 
 import jwt
 
@@ -11,13 +11,18 @@ GATE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7
 
 
 def get_gate_cookie_secret() -> str:
-    """读取门禁签名密钥，未单独配置时使用访问令牌密钥。"""
-    secret = os.environ.get("CHAT_GATE_COOKIE_SECRET") or os.environ.get(
-        "CHAT_JWT_SECRET"
-    )
+    """读取独立的门禁签名密钥，拒绝缺失、短密钥及已知占位配置。"""
+    secret = os.environ.get("CHAT_GATE_COOKIE_SECRET")
     if not secret:
         raise RuntimeError(
-            "CHAT_GATE_COOKIE_SECRET or CHAT_JWT_SECRET is not set. Put it in backend/.env or your shell environment."
+            "CHAT_GATE_COOKIE_SECRET is not set. Put it in backend/.env or your shell environment."
+        )
+    if len(secret.encode("utf-8")) < 32 or secret in {
+        "dev-change-me-in-production",
+        "change-me-to-a-random-secret-with-at-least-32-bytes",
+    }:
+        raise RuntimeError(
+            "CHAT_GATE_COOKIE_SECRET 必须至少包含 32 个 UTF-8 字节，且不能使用默认值或示例占位值"
         )
     return secret
 

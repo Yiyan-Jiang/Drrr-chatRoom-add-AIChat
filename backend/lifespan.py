@@ -2,10 +2,10 @@
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-
-from common.auth import get_access_token_expire_seconds
+from common.auth import get_access_token_expire_seconds, get_jwt_secret
+from common.gate_cookie import get_gate_cookie_secret
 from common.normal_database import engine
+from fastapi import FastAPI
 from normal_system.bootstrap import init_db
 
 
@@ -20,9 +20,13 @@ async def lifespan(_app: FastAPI):
         完成数据库迁移校验后，将控制权交还应用运行阶段。
 
     Raises:
-        RuntimeError: 令牌有效期配置非法，或业务库迁移未达到当前 head。
+        RuntimeError: 签名密钥或令牌有效期配置非法，或业务库迁移未达到当前 head。
     """
     try:
+        jwt_secret = get_jwt_secret()
+        gate_secret = get_gate_cookie_secret()
+        if jwt_secret == gate_secret:
+            raise RuntimeError("CHAT_GATE_COOKIE_SECRET 必须与 CHAT_JWT_SECRET 不同")
         get_access_token_expire_seconds()
         await init_db()
         yield

@@ -2,18 +2,25 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
 import os
+from datetime import datetime, timedelta, timezone
 
 import jwt
 
 
 def get_jwt_secret() -> str:
-    """读取访问令牌签名密钥；未配置时抛出 RuntimeError。"""
+    """读取访问令牌签名密钥，拒绝缺失、短密钥及已知占位配置。"""
     secret = os.environ.get("CHAT_JWT_SECRET")
     if not secret:
         raise RuntimeError(
             "CHAT_JWT_SECRET is not set. Put it in backend/.env or your shell environment."
+        )
+    if len(secret.encode("utf-8")) < 32 or secret in {
+        "dev-change-me-in-production",
+        "change-me-to-a-random-secret-with-at-least-32-bytes",
+    }:
+        raise RuntimeError(
+            "CHAT_JWT_SECRET 必须至少包含 32 个 UTF-8 字节，且不能使用默认值或示例占位值"
         )
     return secret
 
