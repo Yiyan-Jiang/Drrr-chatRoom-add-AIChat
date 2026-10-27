@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { gateApi } from '@/api/gate'
 import AuthBrand from '@/components/auth/AuthBrand'
 import GatePasswordForm from '@/components/auth/GatePasswordForm'
+import { extractErrorMessage } from '@/utils/errorHandler'
 
 /** 提交门禁密码，验证通过后进入登录页，失败时提示并清空密码。 */
 export default function Ddddr() {
@@ -15,10 +16,9 @@ export default function Ddddr() {
     e.preventDefault()
     try {
       await gateApi.verify(password)
-      await new Promise((resolve) => setTimeout(resolve, 100))
       navigate('/login')
-    } catch {
-      toast.error('密码错误')
+    } catch (error) {
+      toast.error(extractErrorMessage(error, '门禁验证失败'))
       setPassword('')
     }
   }

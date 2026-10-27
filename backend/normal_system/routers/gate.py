@@ -1,6 +1,8 @@
 """校验入口密码并管理门禁 Cookie。"""
 
 import os
+from math import ceil
+from time import monotonic
 
 from fastapi import APIRouter, Form, HTTPException, Request, Response, status
 
@@ -11,6 +13,11 @@ from common.gate_cookie import (
 )
 
 router = APIRouter(prefix="/gate", tags=["gate"])
+
+# 当前单进程按客户端地址保存固定失败窗口，首个失败启动计时。
+_gate_failures: dict[str, tuple[float, int]] = {}
+_FAILURE_WINDOW_SECONDS = 60
+_MAX_FAILURES = 5
 
 
 # 获取本地环境变量密码
@@ -27,8 +34,24 @@ def get_gate_password() -> str:
 
 # 校验密码
 @router.post("/verify")
-async def verify_gate(response: Response, password: str = Form(...)):
-    """校验门禁密码，成功时向响应写入 HttpOnly Cookie。"""
+async def verify_gate(request: Request, response: Response, password: str = Form(...)):
+    """限制客户端在固定窗口内的失败次数，验证成功时写入门禁 Cookie。"""
+    now = monotonic()
+    for host, (started_at, _) in list(_gate_failures.items()):
+        if now - started_at >= _FAILURE_WINDOW_SECONDS:
+            del _gate_failures[host]
+
+    host = request.client.host
+    started_at, failures = _gate_failures.get(host, (now, 0))
+    if failures >= _MAX_FAILURES:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="验证过于频繁，请稍后重试",
+            headers={
+                "Retry-After": str(ceil(_FAILURE_WINDOW_SECONDS - (now - started_at)))
+            },
+        )
+
     if password == get_gate_password():
         response.set_cookie(
             key="gate_passed",
@@ -39,7 +62,9 @@ async def verify_gate(response: Response, password: str = Form(...)):
             path="/",
             secure=False,
         )
+        _gate_failures.pop(host, None)
         return {"success": True}
+    _gate_failures[host] = (started_at, failures + 1)
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="密码错误")
 
 
