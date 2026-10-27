@@ -20,6 +20,8 @@ def main() -> None:
             ("UTF8短于32字节", "密" * 10),
             ("旧默认", "dev-change-me-in-production"),
             ("旧示例占位", "change-me-to-a-random-secret-with-at-least-32-bytes"),
+            ("README门禁示例占位", "replace-with-your-own-random-secret"),
+            ("README账号示例占位", "replace-with-another-random-secret"),
         ):
             cases.append((f"{name} {label}", {name: value}, name))
     cases.append(

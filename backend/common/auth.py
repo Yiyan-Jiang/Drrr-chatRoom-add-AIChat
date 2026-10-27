@@ -18,6 +18,8 @@ def get_jwt_secret() -> str:
     if len(secret.encode("utf-8")) < 32 or secret in {
         "dev-change-me-in-production",
         "change-me-to-a-random-secret-with-at-least-32-bytes",
+        "replace-with-your-own-random-secret",
+        "replace-with-another-random-secret",
     }:
         raise RuntimeError(
             "CHAT_JWT_SECRET 必须至少包含 32 个 UTF-8 字节，且不能使用默认值或示例占位值"
